@@ -7,14 +7,10 @@ import { getDb } from '@/lib/firebase';
 import { collection, doc, addDoc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, Timestamp, writeBatch, orderBy, limit as firestoreLimit } from 'firebase/firestore';
 import { randomBytes, createHmac } from 'crypto';
 import { sendOtpEmail, sendSubmissionStatusEmail, sendBulkEmail, sendDirectUserEmail } from '@/lib/nodemailer';
-import jwt from 'jsonwebtoken';
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
-import { generateChatResponse, generateNewsletterEmail } from '@/ai/flows/generate-chat-response';
+import { generateNewsletterEmail } from '@/ai/flows/generate-chat-response';
 import { generateDirectEmail as generateDirectEmailFlow } from '@/ai/flows/generate-direct-email';
-import { generateScriptsFromTemplate } from '@/lib/templates';
-import { NextResponse } from 'next/server';
-import * as cheerio from 'cheerio';
 
 
 const submissionSchema = z.object({
@@ -116,6 +112,8 @@ export async function deleteSubmission(id: string): Promise<{success: boolean, e
 
 // --- Authentication Actions ---
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key';
+const secretKey = new TextEncoder().encode(JWT_SECRET);
+
 
 function generateApiKey() {
     return `cfai_${randomBytes(16).toString('hex')}`;
@@ -170,6 +168,7 @@ export async function customSignUp(values: z.infer<typeof signUpSchema>) {
         
         const newUser = {
             email,
+            name: email.split('@')[0],
             passwordHash: `${salt}:${hash}`,
             isVerified: false,
             isBanned: false,
@@ -207,7 +206,7 @@ const loginSchema = z.object({
     password: z.string(),
 });
 
-function generateToken(user: any) {
+async function generateToken(user: any) {
     if (!user || !user.id) {
         throw new Error('Invalid user object for token generation');
     }
@@ -216,8 +215,12 @@ function generateToken(user: any) {
         email: user.email,
         name: user.name,
         avatar: user.avatar,
-      };
-    return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+    };
+    return await new SignJWT(payload)
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime('7d')
+        .sign(secretKey);
 }
 
 export async function customLogin(values: z.infer<typeof loginSchema>) {
@@ -264,7 +267,7 @@ export async function customLogin(values: z.infer<typeof loginSchema>) {
             return { success: false, requiresOtp: true, userId: user.id };
         }
         
-        const token = generateToken(user);
+        const token = await generateToken(user);
         return { success: true, token };
     } catch (error: any) {
         console.error('Login error:', error);
@@ -311,7 +314,7 @@ export async function verifyOtp(values: z.infer<typeof otpSchema>) {
             return { error: { _errors: ['Could not find user after verification.'] } };
         }
 
-        const token = generateToken(verifiedUser);
+        const token = await generateToken(verifiedUser);
         return { success: true, token };
     } catch (error: any) {
         console.error('OTP verification error:', error);
@@ -378,8 +381,9 @@ export async function createChatbot(values: z.infer<typeof createChatbotSchema>)
     if (!validation.success) return { error: 'Invalid input' };
 
     try {
-        const decoded = jwt.verify(values.token, JWT_SECRET) as { id: string };
-        const userId = decoded.id;
+        const { payload } = await jwtVerify(values.token, secretKey);
+        const userId = payload.id as string;
+        if (!userId) throw new Error('Invalid token');
 
         const db = getDb();
 
@@ -442,8 +446,9 @@ export async function updateChatbotSettings(input: z.infer<typeof chatbotSetting
     const { token, chatbotId, values } = validation.data;
 
     try {
-        const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
-        const userId = decoded.id;
+        const { payload } = await jwtVerify(token, secretKey);
+        const userId = payload.id as string;
+        if (!userId) throw new Error('Invalid token');
         
         const db = getDb();
         const chatbotRef = doc(db, 'chatbots', chatbotId);
@@ -475,9 +480,10 @@ export async function deleteChatbot(values: z.infer<typeof deleteChatbotSchema>)
     if (!validation.success) return { error: 'Invalid input' };
 
     try {
-        const decoded = jwt.verify(values.token, JWT_SECRET) as { id: string };
-        const userId = decoded.id;
-        
+        const { payload } = await jwtVerify(values.token, secretKey);
+        const userId = payload.id as string;
+        if (!userId) throw new Error('Invalid token');
+
         const db = getDb();
         const chatbotRef = doc(db, 'chatbots', values.chatbotId);
         const chatbotSnap = await getDoc(chatbotRef);
@@ -881,34 +887,6 @@ export async function checkAdminAuthStatus(): Promise<{ isAuthenticated: boolean
     }
 }
 
-// --- Live Demo Chat Action ---
-export async function getLiveDemoResponse(message: string, history: any[]): Promise<{reply?: string, error?: string}> {
-    if (!message) {
-        return { error: "Message cannot be empty." };
-    }
-
-    try {
-        const formattedHistory = history
-            .filter(item => typeof item.text === 'string' && item.role) 
-            .map(item => ({
-                role: item.role === 'user' ? 'user' : 'model',
-                content: [{ text: item.text as string }]
-            }));
-
-        const response = await generateChatResponse({
-            message: message,
-            instructions: "You are a friendly and helpful assistant for ChatForge AI, a platform that lets users build and deploy chatbots. Briefly answer questions about the product's features, pricing, and ease of use. Keep your answers concise and encouraging. If asked about something unrelated, politely steer the conversation back to ChatForge AI.",
-            qa: [],
-            history: formattedHistory,
-        });
-        return { reply: response.reply };
-
-    } catch (error: any) {
-        console.error("Live demo chat error:", error);
-        return { error: `Sorry, an error occurred: ${error.message}` };
-    }
-}
-
 export async function findOrCreateUserFromGoogle(profile: any): Promise<{token?: string, error?: string}> {
     if (!profile || !profile.email) {
       return { error: 'Google profile is missing email.' };
@@ -964,7 +942,7 @@ export async function findOrCreateUserFromGoogle(profile: any): Promise<{token?:
         return { error: 'Could not find or create user.' };
       }
 
-      const token = generateToken(user);
+      const token = await generateToken(user);
       return { token };
   
     } catch (error) {
