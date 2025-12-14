@@ -62,17 +62,16 @@ export default function SignupPage() {
         if(result.error.email) {
             form.setError('email', { message: result.error.email[0] });
         } else {
-            toast({ title: 'Sign Up Failed', description: result.error._errors?.join(', ') || 'Could not create account.', variant: 'destructive' });
+            const errorMessage = result.error._errors?.join(', ') || 'Could not create account.';
+            toast({ title: 'Sign Up Failed', description: errorMessage, variant: 'destructive' });
         }
       } else if (result.success && result.userId) {
         toast({ title: 'Account Created!', description: 'Please check your email for a verification code.' });
         setUserIdForOtp(result.userId);
         setShowOtpDialog(true);
-      } else {
-        toast({ title: 'Sign Up Failed', description: 'An unexpected error occurred.', variant: 'destructive' });
       }
     } catch (error) {
-      toast({ title: 'Sign Up Failed', description: 'An unexpected error occurred.', variant: 'destructive' });
+      toast({ title: 'Sign Up Failed', description: 'An unexpected error occurred on the client.', variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }

@@ -57,8 +57,9 @@ export default function LoginPage() {
     try {
         const result = await customLogin(values);
         if (result.error) {
-            toast({ title: 'Login Failed', description: result.error._errors?.join(', ') || 'Invalid credentials.', variant: 'destructive' });
-            form.setError('root', { message: result.error._errors?.join(', ') || 'Login failed.' });
+            const errorMessage = result.error._errors?.join(', ') || 'Invalid credentials.';
+            toast({ title: 'Login Failed', description: errorMessage, variant: 'destructive' });
+            form.setError('root', { message: errorMessage });
         } else if (result.requiresOtp && result.userId) {
             toast({
                 title: 'Verification Required',

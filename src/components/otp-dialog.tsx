@@ -1,7 +1,7 @@
 // src/components/otp-dialog.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -40,9 +40,9 @@ interface OtpDialogProps {
 
 export default function OtpDialog({ isOpen, onClose, onSuccess, userId }: OtpDialogProps) {
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isVerifying, startVerifyTransition] = useTransition();
+  const [isResending, startResendTransition] = useTransition();
   const [resendTimer, setResendTimer] = useState(30);
-  const [resendCooldown, setResendCooldown] = useState(30);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -50,50 +50,57 @@ export default function OtpDialog({ isOpen, onClose, onSuccess, userId }: OtpDia
       interval = setInterval(() => {
         setResendTimer(prev => prev - 1);
       }, 1000);
+    } else if (resendTimer === 0) {
+      // Optional: reset timer if you want it to restart from 30 on next open
     }
     return () => clearInterval(interval);
   }, [isOpen, resendTimer]);
+
+  useEffect(() => {
+    // Reset timer when dialog opens
+    if (isOpen) {
+      setResendTimer(30);
+    }
+  }, [isOpen]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: { otp: '' },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsLoading(true);
-    try {
-        const result = await verifyOtp({ ...values, userId });
-        if (result.error) {
-            form.setError('otp', { message: result.error.otp?.[0] || 'Verification failed.' });
-        } else if (result.token) {
-            onSuccess(result.token);
+  function onSubmit(values: z.infer<typeof formSchema>) {
+    startVerifyTransition(async () => {
+        try {
+            const result = await verifyOtp({ ...values, userId });
+            if (result.error) {
+                form.setError('otp', { message: result.error.otp?.[0] || result.error._errors?.join(', ') || 'Verification failed.' });
+            } else if (result.token) {
+                onSuccess(result.token);
+            }
+        } catch (error) {
+            toast({ title: 'Verification Failed', description: 'An unexpected error occurred.', variant: 'destructive' });
         }
-    } catch (error) {
-        toast({ title: 'Verification Failed', description: 'An unexpected error occurred.', variant: 'destructive' });
-    } finally {
-        setIsLoading(false);
-    }
+    });
   }
 
-  const handleResendOtp = async () => {
+  const handleResendOtp = () => {
     if (resendTimer > 0) return;
-    setIsLoading(true);
-    try {
-        const result = await resendOtp(userId);
-        if(result.error) {
-            toast({ title: 'Failed to resend OTP', description: result.error, variant: 'destructive' });
-        } else {
-            toast({ title: 'OTP Resent', description: 'A new OTP has been sent to your email.' });
-            const newCooldown = resendCooldown + 10;
-            setResendCooldown(newCooldown);
-            setResendTimer(newCooldown);
+    startResendTransition(async () => {
+        try {
+            const result = await resendOtp(userId);
+            if(result.error) {
+                toast({ title: 'Failed to resend OTP', description: result.error, variant: 'destructive' });
+            } else {
+                toast({ title: 'OTP Resent', description: 'A new OTP has been sent to your email.' });
+                setResendTimer(60); // Set a new cooldown
+            }
+        } catch (error) {
+            toast({ title: 'Failed to resend OTP', description: 'An unexpected error occurred.', variant: 'destructive' });
         }
-    } catch (error) {
-        toast({ title: 'Failed to resend OTP', description: 'An unexpected error occurred.', variant: 'destructive' });
-    } finally {
-        setIsLoading(false);
-    }
+    });
   };
+  
+  const isLoading = isVerifying || isResending;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -113,18 +120,19 @@ export default function OtpDialog({ isOpen, onClose, onSuccess, userId }: OtpDia
                 <FormItem>
                   <FormLabel>One-Time Password (OTP)</FormLabel>
                   <FormControl>
-                    <Input placeholder="123456" {...field} />
+                    <Input placeholder="123456" {...field} disabled={isLoading} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <DialogFooter className="flex-col space-y-2 sm:flex-row sm:space-y-0">
+            <DialogFooter className="flex-col space-y-2 sm:flex-row sm:space-y-0 sm:justify-between sm:items-center">
                 <Button type="button" variant="ghost" onClick={handleResendOtp} disabled={isLoading || resendTimer > 0}>
+                    {isResending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend OTP'}
                 </Button>
                 <Button type="submit" disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Verify & Log In
                 </Button>
             </DialogFooter>

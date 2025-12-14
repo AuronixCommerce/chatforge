@@ -157,52 +157,47 @@ export async function customSignUp(values: z.infer<typeof signUpSchema>) {
     }
 
     const { email, password } = validation.data;
-    const db = await getDb();
-
-    const existingUser = await db.collection('users').findOne({ email });
-    if (existingUser) {
-        return { error: { email: ['A user with this email already exists.'] } };
-    }
     
-    const otp = randomBytes(3).toString('hex').toUpperCase();
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // OTP expires in 10 minutes
-
-    const salt = randomBytes(16).toString('hex');
-    const hash = createHmac('sha256', salt).update(password).digest('hex');
-    
-    const newUser = {
-        email,
-        passwordHash: `${salt}:${hash}`,
-        isVerified: false,
-        isBanned: false,
-        authMethod: 'email',
-        otp,
-        otpExpires,
-        createdAt: new Date(),
-        messagesSent: 0,
-        messageLimit: 1000,
-        chatbotLimit: 1,
-        plan: 'Free',
-        planCycleStartDate: new Date(),
-    };
-
     try {
+        const db = await getDb();
+
+        const existingUser = await db.collection('users').findOne({ email });
+        if (existingUser) {
+            return { error: { email: ['A user with this email already exists.'] } };
+        }
+        
+        const otp = randomBytes(3).toString('hex').toUpperCase();
+        const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // OTP expires in 10 minutes
+
+        const salt = randomBytes(16).toString('hex');
+        const hash = createHmac('sha256', salt).update(password).digest('hex');
+        
+        const newUser = {
+            email,
+            passwordHash: `${salt}:${hash}`,
+            isVerified: false,
+            isBanned: false,
+            authMethod: 'email',
+            otp,
+            otpExpires,
+            createdAt: new Date(),
+            messagesSent: 0,
+            messageLimit: 1000,
+            chatbotLimit: 1,
+            plan: 'Free',
+            planCycleStartDate: new Date(),
+        };
+
         const result = await db.collection('users').insertOne(newUser);
         
         await createDefaultChatbot(db, result.insertedId);
-
-        try {
-          await sendOtpEmail(email, otp);
-        } catch (emailError) {
-          console.error("Failed to send OTP email, but user was created:", emailError);
-          // Don't block user creation if email fails. They can resend OTP later.
-        }
+        await sendOtpEmail(email, otp);
 
         return { success: true, userId: result.insertedId.toString() };
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Sign up error:', error);
-        return { error: { _errors: ['Could not create your account.'] } };
+        return { error: { _errors: [`Could not create your account: ${error.message}`] } };
     }
 }
 
@@ -231,47 +226,48 @@ export async function customLogin(values: z.infer<typeof loginSchema>) {
     }
     
     const { email, password } = validation.data;
-    const db = await getDb();
-    
-    const user = await db.collection('users').findOne({ email });
-
-    if (!user) {
-        return { error: { _errors: ['Invalid email or password.'] } };
-    }
-
-    if (user.authMethod === 'google') {
-        return { error: { _errors: ['This account was created with Google. Please use Google Sign-In.'] } };
-    }
-
-    if (!user.passwordHash) {
-        return { error: { _errors: ['Invalid account configuration. Please contact support.'] } };
-    }
-    
-    const [salt, storedHash] = user.passwordHash.split(':');
-    const hash = createHmac('sha256', salt).update(password).digest('hex');
-
-    if (hash !== storedHash) {
-        return { error: { _errors: ['Invalid email or password.'] } };
-    }
-    
-    if (!user.isVerified) {
-        // User exists and password is correct, but not verified.
-        // Send a new OTP and prompt for verification.
-        const otp = randomBytes(3).toString('hex').toUpperCase();
-        const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+    try {
+        const db = await getDb();
         
-        await db.collection('users').updateOne({ _id: user._id }, { $set: { otp, otpExpires }});
-        try {
-            await sendOtpEmail(email, otp);
-        } catch (emailError) {
-            console.error("Failed to send OTP email on login:", emailError);
+        const user = await db.collection('users').findOne({ email });
+
+        if (!user) {
+            return { error: { _errors: ['Invalid email or password.'] } };
+        }
+
+        if (user.authMethod === 'google') {
+            return { error: { _errors: ['This account was created with Google. Please use Google Sign-In.'] } };
+        }
+
+        if (!user.passwordHash) {
+            return { error: { _errors: ['Invalid account configuration. Please contact support.'] } };
         }
         
-        return { success: false, requiresOtp: true, userId: user._id.toString() };
+        const [salt, storedHash] = user.passwordHash.split(':');
+        const hash = createHmac('sha256', salt).update(password).digest('hex');
+
+        if (hash !== storedHash) {
+            return { error: { _errors: ['Invalid email or password.'] } };
+        }
+        
+        if (!user.isVerified) {
+            // User exists and password is correct, but not verified.
+            // Send a new OTP and prompt for verification.
+            const otp = randomBytes(3).toString('hex').toUpperCase();
+            const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+            
+            await db.collection('users').updateOne({ _id: user._id }, { $set: { otp, otpExpires }});
+            await sendOtpEmail(email, otp);
+            
+            return { success: false, requiresOtp: true, userId: user._id.toString() };
+        }
+        
+        const token = generateToken(user);
+        return { success: true, token };
+    } catch (error: any) {
+        console.error('Login error:', error);
+        return { error: { _errors: [`An unexpected error occurred: ${error.message}`] } };
     }
-    
-    const token = generateToken(user);
-    return { success: true, token };
 }
 
 const otpSchema = z.object({
@@ -285,49 +281,59 @@ export async function verifyOtp(values: z.infer<typeof otpSchema>) {
         return { error: validation.error.flatten().fieldErrors };
     }
     const { userId, otp } = validation.data;
-    const db = await getDb();
-    
-    if (!ObjectId.isValid(userId)) {
-        return { error: { otp: ['Invalid user ID.'] } };
-    }
-    const user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
+    try {
+        const db = await getDb();
+        
+        if (!ObjectId.isValid(userId)) {
+            return { error: { otp: ['Invalid user ID.'] } };
+        }
+        const user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
 
-    if (!user || user.otp !== otp.toUpperCase()) {
-        return { error: { otp: ['Invalid OTP.'] } };
-    }
+        if (!user || user.otp !== otp.toUpperCase()) {
+            return { error: { otp: ['Invalid OTP.'] } };
+        }
 
-    if (user.otpExpires < new Date()) {
-        return { error: { otp: ['OTP has expired.'] } };
-    }
-    
-    await db.collection('users').updateOne({ _id: user._id }, { $set: { isVerified: true, otp: null, otpExpires: null }});
-    
-    // Re-fetch the user to get the latest state
-    const verifiedUser = await db.collection('users').findOne({ _id: user._id });
+        if (user.otpExpires < new Date()) {
+            return { error: { otp: ['OTP has expired.'] } };
+        }
+        
+        await db.collection('users').updateOne({ _id: user._id }, { $set: { isVerified: true, otp: null, otpExpires: null }});
+        
+        // Re-fetch the user to get the latest state for token generation
+        const verifiedUser = await db.collection('users').findOne({ _id: user._id });
 
-    if (!verifiedUser) {
-        return { error: { _errors: ['Could not find user after verification.'] } };
-    }
+        if (!verifiedUser) {
+            return { error: { _errors: ['Could not find user after verification.'] } };
+        }
 
-    const token = generateToken(verifiedUser);
-    return { success: true, token, email: verifiedUser.email };
+        const token = generateToken(verifiedUser);
+        return { success: true, token, email: verifiedUser.email };
+    } catch (error: any) {
+        console.error('OTP verification error:', error);
+        return { error: { _errors: [`An unexpected error occurred: ${error.message}`] } };
+    }
 }
 
 export async function resendOtp(userId: string) {
     if (!userId || !ObjectId.isValid(userId)) return { error: 'User ID is required.' };
     
-    const db = await getDb();
-    const user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
+    try {
+        const db = await getDb();
+        const user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
 
-    if (!user) return { error: 'User not found.' };
+        if (!user) return { error: 'User not found.' };
 
-    const otp = randomBytes(3).toString('hex').toUpperCase();
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+        const otp = randomBytes(3).toString('hex').toUpperCase();
+        const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
 
-    await db.collection('users').updateOne({ _id: user._id }, { $set: { otp, otpExpires }});
-    await sendOtpEmail(user.email, otp);
+        await db.collection('users').updateOne({ _id: user._id }, { $set: { otp, otpExpires }});
+        await sendOtpEmail(user.email, otp);
 
-    return { success: true };
+        return { success: true };
+    } catch (error: any) {
+        console.error('Resend OTP error:', error);
+        return { error: `An unexpected error occurred: ${error.message}` };
+    }
 }
 
 // --- Chatbot Management Actions ---
