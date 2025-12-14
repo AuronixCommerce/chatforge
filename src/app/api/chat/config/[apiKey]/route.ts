@@ -1,6 +1,8 @@
 // src/app/api/chat/config/[apiKey]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/mongodb';
+import { getDb } from '@/lib/firebase';
+import { collection, query, where, getDocs, doc, getDoc, limit } from 'firebase/firestore';
+
 
 // This new route provides the public configuration for a given chatbot.
 export async function GET(req: NextRequest, { params }: { params: { apiKey: string }}) {
@@ -11,19 +13,25 @@ export async function GET(req: NextRequest, { params }: { params: { apiKey: stri
     }
   
     try {
-      const db = await getDb();
-      // Find the chatbot by its unique API key
-      const chatbot = await db.collection('chatbots').findOne({ apiKey });
+      const db = getDb();
+      const chatbotQuery = query(collection(db, 'chatbots'), where('apiKey', '==', apiKey), limit(1));
+      const chatbotSnap = await getDocs(chatbotQuery);
   
-      if (!chatbot) {
+      if (chatbotSnap.empty) {
           return NextResponse.json({ error: 'Invalid API key.' }, { status: 401 });
       }
 
+      const chatbot = chatbotSnap.docs[0].data();
+
       // Check if the owner is banned or get their plan
-      const user = await db.collection('users').findOne({ _id: chatbot.userId });
-      if (user?.isBanned) {
+      const userRef = doc(db, 'users', chatbot.userId);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists() || userSnap.data().isBanned) {
         return NextResponse.json({ error: 'This chatbot has been disabled.' }, { status: 403 });
       }
+      
+      const user = userSnap.data();
 
       // Return public-safe configuration from the chatbot document
       const response = NextResponse.json({

@@ -3,8 +3,8 @@
 'use server';
 import 'dotenv/config';
 import { z } from 'zod';
-import { getDb } from '@/lib/mongodb';
-import { MongoClient, ObjectId } from 'mongodb';
+import { getDb } from '@/lib/firebase';
+import { collection, doc, addDoc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, where, Timestamp, writeBatch, orderBy, limit as firestoreLimit } from 'firebase/firestore';
 import { randomBytes, createHmac } from 'crypto';
 import { sendOtpEmail, sendSubmissionStatusEmail, sendBulkEmail, sendDirectUserEmail } from '@/lib/nodemailer';
 import jwt from 'jsonwebtoken';
@@ -32,13 +32,13 @@ export async function createSubmission(values: z.infer<typeof submissionSchema>)
     }
 
     try {
-        const db = await getDb();
+        const db = getDb();
         const newSubmission = {
             ...validation.data,
             status: 'pending', // 'pending', 'accepted', 'rejected'
-            createdAt: new Date(),
+            createdAt: Timestamp.now(),
         };
-        await db.collection('submissions').insertOne(newSubmission);
+        await addDoc(collection(db, 'submissions'), newSubmission);
 
         return { success: true };
     } catch (error) {
@@ -49,9 +49,12 @@ export async function createSubmission(values: z.infer<typeof submissionSchema>)
 
 export async function listSubmissions(): Promise<{submissions?: any[], error?: string}> {
     try {
-        const db = await getDb();
-        const submissions = await db.collection('submissions').find().sort({ createdAt: -1 }).toArray();
-        return { submissions: submissions.map(s => ({...s, _id: s._id.toString()})) };
+        const db = getDb();
+        const q = query(collection(db, 'submissions'), orderBy('createdAt', 'desc'));
+        const querySnapshot = await getDocs(q);
+        const submissions = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Convert Timestamps to string for serialization
+        return { submissions: submissions.map(s => ({...s, _id: s.id, createdAt: s.createdAt.toDate().toISOString()})) };
     } catch (error) {
         console.error('Error listing submissions:', error);
         return { error: 'Could not list submissions.' };
@@ -71,30 +74,27 @@ export async function updateSubmissionStatus(values: z.infer<typeof updateSubmis
     const { id, status } = validation.data;
 
     try {
-        const db = await getDb();
-        if (!ObjectId.isValid(id)) return { error: 'Invalid submission ID.' };
-        
-        const result = await db.collection('submissions').findOneAndUpdate(
-            { _id: new ObjectId(id), status: 'pending' },
-            { $set: { status: status } },
-            { returnDocument: 'after' }
-        );
+        const db = getDb();
+        const submissionRef = doc(db, 'submissions', id);
+        const submissionSnap = await getDoc(submissionRef);
 
-        if (!result) {
+        if (!submissionSnap.exists() || submissionSnap.data().status !== 'pending') {
             return { error: 'Submission not found or already processed.' };
         }
         
-        let recipientEmail = result.email;
+        await updateDoc(submissionRef, { status });
 
-        // Send email notification
+        const updatedSubmissionData = { id, ...submissionSnap.data(), status };
+
         await sendSubmissionStatusEmail({
-            to: recipientEmail,
-            name: result.name,
-            plan: result.plan,
+            to: updatedSubmissionData.email,
+            name: updatedSubmissionData.name,
+            plan: updatedSubmissionData.plan,
             status: status,
         });
-
-        return { success: true, updatedSubmission: {...result, _id: result._id.toString()} };
+        
+        const serializableSubmission = { ...updatedSubmissionData, createdAt: updatedSubmissionData.createdAt.toDate().toISOString() };
+        return { success: true, updatedSubmission: serializableSubmission };
 
     } catch (error) {
         console.error(`Error updating submission ${id} to ${status}:`, error);
@@ -103,24 +103,15 @@ export async function updateSubmissionStatus(values: z.infer<typeof updateSubmis
 }
 
 export async function deleteSubmission(id: string): Promise<{success: boolean, error?: string}> {
-    if (!ObjectId.isValid(id)) {
-      return { success: false, error: 'Invalid submission ID.' };
-    }
-  
     try {
-      const db = await getDb();
-      const result = await db.collection('submissions').deleteOne({ _id: new ObjectId(id) });
-  
-      if (result.deletedCount === 0) {
-        return { success: false, error: 'Submission not found.' };
-      }
-  
+      const db = getDb();
+      await deleteDoc(doc(db, 'submissions', id));
       return { success: true };
     } catch (error) {
       console.error('Error deleting submission:', error);
       return { success: false, error: 'Could not delete the submission.' };
     }
-  }
+}
 
 
 // --- Authentication Actions ---
@@ -130,7 +121,7 @@ function generateApiKey() {
     return `cfai_${randomBytes(16).toString('hex')}`;
 }
 
-async function createDefaultChatbot(db: any, session: any, userId: ObjectId) {
+async function createDefaultChatbot(db: Firestore, batch: any, userId: string) {
     const defaultBot = {
         userId,
         name: 'My First Bot',
@@ -139,10 +130,11 @@ async function createDefaultChatbot(db: any, session: any, userId: ObjectId) {
         welcomeMessage: 'Hello! How can I help you today?',
         color: '#007BFF',
         apiKey: generateApiKey(),
-        createdAt: new Date(),
+        createdAt: Timestamp.now(),
         authorizedDomains: [],
     };
-    await db.collection('chatbots').insertOne(defaultBot, { session });
+    const chatbotRef = doc(collection(db, 'chatbots'));
+    batch.set(chatbotRef, defaultBot);
 }
 
 const signUpSchema = z.object({
@@ -159,81 +151,54 @@ export async function customSignUp(values: z.infer<typeof signUpSchema>) {
 
     const { email, password } = validation.data;
     
-    let client: MongoClient | null = null;
-    let session;
     try {
-        const db = await getDb();
-        client = db.client;
-        session = client.startSession();
-
-        let userId;
-
-        await session.withTransaction(async () => {
-            const existingUser = await db.collection('users').findOne({ email }, { session });
-            if (existingUser) {
-                // We must abort the transaction and throw an error that we can catch
-                throw new Error('A user with this email already exists.');
-            }
-            
-            const otp = randomBytes(3).toString('hex').toUpperCase();
-            const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // OTP expires in 10 minutes
-
-            const salt = randomBytes(16).toString('hex');
-            const hash = createHmac('sha256', salt).update(password).digest('hex');
-            
-            const newUser = {
-                email,
-                passwordHash: `${salt}:${hash}`,
-                isVerified: false,
-                isBanned: false,
-                authMethod: 'email',
-                otp,
-                otpExpires,
-                createdAt: new Date(),
-                messagesSent: 0,
-                messageLimit: 1000,
-                chatbotLimit: 1,
-                plan: 'Free',
-                planCycleStartDate: new Date(),
-            };
-
-            const result = await db.collection('users').insertOne(newUser, { session });
-            userId = result.insertedId;
-
-            // Create the default chatbot within the same transaction
-            await createDefaultChatbot(db, session, userId);
-            
-            // Send email after we are sure the transaction will commit
-            await sendOtpEmail(email, otp);
-        });
+        const db = getDb();
         
-        if (session.inTransaction()) {
-           await session.commitTransaction();
-        }
+        const usersRef = collection(db, 'users');
+        const q = query(usersRef, where('email', '==', email));
+        const existingUserSnap = await getDocs(q);
 
-        if (!userId) {
-            // This should not happen if the transaction is successful, but it's a safeguard.
-            throw new Error('User creation failed, but transaction did not throw.');
+        if (!existingUserSnap.empty) {
+             return { error: { email: ['A user with this email already exists.'] } };
         }
+            
+        const otp = randomBytes(3).toString('hex').toUpperCase();
+        const otpExpires = Timestamp.fromDate(new Date(Date.now() + 10 * 60 * 1000)); // OTP expires in 10 minutes
 
-        return { success: true, userId: userId.toString() };
+        const salt = randomBytes(16).toString('hex');
+        const hash = createHmac('sha256', salt).update(password).digest('hex');
+        
+        const newUser = {
+            email,
+            passwordHash: `${salt}:${hash}`,
+            isVerified: false,
+            isBanned: false,
+            authMethod: 'email',
+            otp,
+            otpExpires,
+            createdAt: Timestamp.now(),
+            messagesSent: 0,
+            messageLimit: 1000,
+            chatbotLimit: 1,
+            plan: 'Free',
+            planCycleStartDate: Timestamp.now(),
+        };
+
+        const batch = writeBatch(db);
+        const userRef = doc(collection(db, 'users'));
+        batch.set(userRef, newUser);
+
+        await createDefaultChatbot(db, batch, userRef.id);
+        
+        await batch.commit();
+
+        await sendOtpEmail(email, otp);
+
+        return { success: true, userId: userRef.id };
 
     } catch (error: any) {
         console.error('Sign up transaction error:', error);
-        
-        if (session && session.inTransaction()) {
-            await session.abortTransaction();
-        }
-        
-        if (error.message === 'A user with this email already exists.') {
-            return { error: { email: [error.message] } };
-        }
-
         return { error: { _errors: [`Could not create your account: An unexpected database error occurred.`] } };
-    } finally {
-        if(session) {
-            await session.endSession();
-        }
     }
 }
 
@@ -243,11 +208,11 @@ const loginSchema = z.object({
 });
 
 function generateToken(user: any) {
-    if (!user || !user._id) {
+    if (!user || !user.id) {
         throw new Error('Invalid user object for token generation');
     }
     const payload = {
-        id: user._id.toString(),
+        id: user.id,
         email: user.email,
         name: user.name,
         avatar: user.avatar,
@@ -263,13 +228,16 @@ export async function customLogin(values: z.infer<typeof loginSchema>) {
     
     const { email, password } = validation.data;
     try {
-        const db = await getDb();
-        
-        const user = await db.collection('users').findOne({ email });
+        const db = getDb();
+        const q = query(collection(db, 'users'), where('email', '==', email), firestoreLimit(1));
+        const querySnapshot = await getDocs(q);
 
-        if (!user) {
-            return { error: { _errors: ['Invalid email or password.'] } };
+        if (querySnapshot.empty) {
+             return { error: { _errors: ['Invalid email or password.'] } };
         }
+        
+        const userDoc = querySnapshot.docs[0];
+        const user = { id: userDoc.id, ...userDoc.data() };
 
         if (user.authMethod === 'google') {
             return { error: { _errors: ['This account was created with Google. Please use Google Sign-In.'] } };
@@ -287,15 +255,13 @@ export async function customLogin(values: z.infer<typeof loginSchema>) {
         }
         
         if (!user.isVerified) {
-            // User exists and password is correct, but not verified.
-            // Send a new OTP and prompt for verification.
             const otp = randomBytes(3).toString('hex').toUpperCase();
-            const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+            const otpExpires = Timestamp.fromDate(new Date(Date.now() + 10 * 60 * 1000));
             
-            await db.collection('users').updateOne({ _id: user._id }, { $set: { otp, otpExpires }});
+            await updateDoc(userDoc.ref, { otp, otpExpires });
             await sendOtpEmail(email, otp);
             
-            return { success: false, requiresOtp: true, userId: user._id.toString() };
+            return { success: false, requiresOtp: true, userId: user.id };
         }
         
         const token = generateToken(user);
@@ -318,25 +284,28 @@ export async function verifyOtp(values: z.infer<typeof otpSchema>) {
     }
     const { userId, otp } = validation.data;
     try {
-        const db = await getDb();
-        
-        if (!ObjectId.isValid(userId)) {
-            return { error: { otp: ['Invalid user ID.'] } };
+        const db = getDb();
+        const userRef = doc(db, 'users', userId);
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) {
+             return { error: { otp: ['Invalid user ID.'] } };
         }
-        const user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
+        
+        const user = { id: userSnap.id, ...userSnap.data() };
 
         if (!user || user.otp !== otp.toUpperCase()) {
             return { error: { otp: ['Invalid OTP.'] } };
         }
 
-        if (user.otpExpires < new Date()) {
+        if (user.otpExpires.toDate() < new Date()) {
             return { error: { otp: ['OTP has expired.'] } };
         }
         
-        await db.collection('users').updateOne({ _id: user._id }, { $set: { isVerified: true, otp: null, otpExpires: null }});
+        await updateDoc(userRef, { isVerified: true, otp: null, otpExpires: null });
         
-        // Re-fetch the user to get the latest state for token generation
-        const verifiedUser = await db.collection('users').findOne({ _id: user._id });
+        const verifiedUserSnap = await getDoc(userRef);
+        const verifiedUser = { id: verifiedUserSnap.id, ...verifiedUserSnap.data() };
 
         if (!verifiedUser) {
             return { error: { _errors: ['Could not find user after verification.'] } };
@@ -351,19 +320,20 @@ export async function verifyOtp(values: z.infer<typeof otpSchema>) {
 }
 
 export async function resendOtp(userId: string) {
-    if (!userId || !ObjectId.isValid(userId)) return { error: 'User ID is required.' };
+    if (!userId) return { error: 'User ID is required.' };
     
     try {
-        const db = await getDb();
-        const user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
+        const db = getDb();
+        const userRef = doc(db, 'users', userId);
+        const userSnap = await getDoc(userRef);
 
-        if (!user) return { error: 'User not found.' };
+        if (!userSnap.exists()) return { error: 'User not found.' };
 
         const otp = randomBytes(3).toString('hex').toUpperCase();
-        const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+        const otpExpires = Timestamp.fromDate(new Date(Date.now() + 10 * 60 * 1000));
 
-        await db.collection('users').updateOne({ _id: user._id }, { $set: { otp, otpExpires }});
-        await sendOtpEmail(user.email, otp);
+        await updateDoc(userRef, { otp, otpExpires });
+        await sendOtpEmail(userSnap.data().email, otp);
 
         return { success: true };
     } catch (error: any) {
@@ -376,19 +346,22 @@ export async function resendOtp(userId: string) {
 
 const serializeChatbot = (chatbot: any) => {
     if (!chatbot) return null;
+    const data = chatbot.data();
     return {
-        ...chatbot,
-        _id: chatbot._id.toString(),
-        userId: chatbot.userId.toString(),
+        _id: chatbot.id,
+        ...data,
+        createdAt: data.createdAt?.toDate().toISOString(),
     };
 };
 
 export async function listUserChatbots(userId: string): Promise<{chatbots?: any[], error?: string}> {
-    if (!userId || !ObjectId.isValid(userId)) return { error: 'User not authenticated' };
+    if (!userId) return { error: 'User not authenticated' };
     try {
-        const db = await getDb();
-        const chatbots = await db.collection('chatbots').find({ userId: new ObjectId(userId) }).sort({ createdAt: 1 }).toArray();
-        return { chatbots: chatbots.map(serializeChatbot) };
+        const db = getDb();
+        const q = query(collection(db, 'chatbots'), where('userId', '==', userId), orderBy('createdAt', 'asc'));
+        const querySnapshot = await getDocs(q);
+        const chatbots = querySnapshot.docs.map(serializeChatbot);
+        return { chatbots };
     } catch (error) {
         console.error('Error listing chatbots:', error);
         return { error: 'Could not list chatbots.' };
@@ -408,33 +381,36 @@ export async function createChatbot(values: z.infer<typeof createChatbotSchema>)
         const decoded = jwt.verify(values.token, JWT_SECRET) as { id: string };
         const userId = decoded.id;
 
-        const db = await getDb();
+        const db = getDb();
 
-        const user = await db.collection('users').findOne({ _id: new ObjectId(userId) });
-        if (!user) return { error: 'User not found' };
+        const userRef = doc(db, 'users', userId);
+        const userSnap = await getDoc(userRef);
+        if (!userSnap.exists()) return { error: 'User not found' };
+        const user = userSnap.data();
 
-        const existingBotsCount = await db.collection('chatbots').countDocuments({ userId: new ObjectId(userId) });
+        const chatbotsQuery = query(collection(db, 'chatbots'), where('userId', '==', userId));
+        const existingBotsSnap = await getDocs(chatbotsQuery);
         
-        if (existingBotsCount >= (user.chatbotLimit ?? 1)) {
+        if (existingBotsSnap.size >= (user.chatbotLimit ?? 1)) {
             return { error: 'You have reached your chatbot limit for this plan.' };
         }
 
         const newBot = {
-            userId: new ObjectId(userId),
+            userId: userId,
             name: values.name,
             instructions: `You are a helpful assistant named ${values.name}.`,
             qa: [],
             welcomeMessage: 'Hello! How can I help you today?',
             color: '#007BFF',
             apiKey: generateApiKey(),
-            createdAt: new Date(),
+            createdAt: Timestamp.now(),
             authorizedDomains: [],
         };
 
-        const result = await db.collection('chatbots').insertOne(newBot);
-        const createdBot = await db.collection('chatbots').findOne({ _id: result.insertedId });
+        const docRef = await addDoc(collection(db, 'chatbots'), newBot);
+        const createdBotSnap = await getDoc(docRef);
         
-        return { success: true, newChatbot: serializeChatbot(createdBot) };
+        return { success: true, newChatbot: serializeChatbot(createdBotSnap) };
     } catch (error: any) {
         console.error('Create chatbot error:', error);
         return { error: error.message || 'Could not create chatbot.' };
@@ -469,39 +445,20 @@ export async function updateChatbotSettings(input: z.infer<typeof chatbotSetting
         const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
         const userId = decoded.id;
         
-        if (!ObjectId.isValid(chatbotId) || !ObjectId.isValid(userId)) {
-            return { error: { _errors: ['Invalid ID format.']}};
-        }
-
-        const updateData: any = {};
-        if (values.instructions !== undefined) updateData.instructions = values.instructions;
-        if (values.qa !== undefined) updateData.qa = values.qa;
-        if (values.name !== undefined) updateData.name = values.name;
-        if (values.welcomeMessage !== undefined) updateData.welcomeMessage = values.welcomeMessage;
-        if (values.color !== undefined) updateData.color = values.color;
-        if (values.authorizedDomains !== undefined) updateData.authorizedDomains = values.authorizedDomains;
-
-        const db = await getDb();
-        if (Object.keys(updateData).length === 0) {
-            // Find the bot to return its current state
-            const currentBot = await db.collection('chatbots').findOne({ _id: new ObjectId(chatbotId), userId: new ObjectId(userId) });
-            if (!currentBot) {
-                return { error: { _errors: ['Chatbot not found or you do not have permission to view it.'] }};
-            }
-            return { success: true, updatedChatbot: serializeChatbot(currentBot) };
-        }
-
-        const result = await db.collection('chatbots').findOneAndUpdate(
-            { _id: new ObjectId(chatbotId), userId: new ObjectId(userId) },
-            { $set: updateData },
-            { returnDocument: 'after' }
-        );
-
-        if (!result) {
+        const db = getDb();
+        const chatbotRef = doc(db, 'chatbots', chatbotId);
+        const chatbotSnap = await getDoc(chatbotRef);
+        
+        if (!chatbotSnap.exists() || chatbotSnap.data().userId !== userId) {
             return { error: { _errors: ['Chatbot not found or you do not have permission to edit it.'] }};
         }
 
-        return { success: true, updatedChatbot: serializeChatbot(result) };
+        await updateDoc(chatbotRef, values);
+        
+        const updatedBotSnap = await getDoc(chatbotRef);
+        
+        return { success: true, updatedChatbot: serializeChatbot(updatedBotSnap) };
+
     } catch (error) {
         console.error('Update chatbot settings error:', error);
         return { error: { _errors: ['Could not update settings. Your session might be invalid.'] } };
@@ -521,19 +478,15 @@ export async function deleteChatbot(values: z.infer<typeof deleteChatbotSchema>)
         const decoded = jwt.verify(values.token, JWT_SECRET) as { id: string };
         const userId = decoded.id;
         
-        if (!ObjectId.isValid(values.chatbotId) || !ObjectId.isValid(userId)) {
-            return { error: 'Invalid ID format.'};
-        }
-
-        const db = await getDb();
-        const result = await db.collection('chatbots').deleteOne({
-            _id: new ObjectId(values.chatbotId),
-            userId: new ObjectId(userId)
-        });
-
-        if (result.deletedCount === 0) {
+        const db = getDb();
+        const chatbotRef = doc(db, 'chatbots', values.chatbotId);
+        const chatbotSnap = await getDoc(chatbotRef);
+        
+        if (!chatbotSnap.exists() || chatbotSnap.data().userId !== userId) {
             return { error: 'Chatbot not found or you do not have permission to delete it.' };
         }
+
+        await deleteDoc(chatbotRef);
 
         return { success: true };
     } catch (error: any) {
@@ -544,29 +497,38 @@ export async function deleteChatbot(values: z.infer<typeof deleteChatbotSchema>)
 
 
 // --- Admin User Management Actions ---
-
-const serializeUser = (user: any) => {
-    if (!user) return null;
-    const { passwordHash, otp, otpExpires, ...rest } = user;
+const serializeUser = (userDoc: any) => {
+    if (!userDoc.exists()) return null;
+    const { passwordHash, otp, otpExpires, ...rest } = userDoc.data();
     
-    const serialized = {
-        ...rest,
-        _id: user._id.toString(),
-    };
-
-    if (serialized.chatbots) {
-        serialized.chatbots = serialized.chatbots.map(serializeChatbot);
+    // Convert Timestamps
+    const serialized = { ...rest };
+    for (const key in serialized) {
+        if (serialized[key] instanceof Timestamp) {
+            serialized[key] = serialized[key].toDate().toISOString();
+        }
     }
     
-    return serialized;
+    return {
+        ...serialized,
+        _id: userDoc.id,
+    };
 };
 
-export async function listUsers(query?: string): Promise<{users?: any[], error?: string}> {
+export async function listUsers(queryString?: string): Promise<{users?: any[], error?: string}> {
     try {
-        const db = await getDb();
-        const filter = query ? { email: { $regex: query, $options: 'i' } } : {};
-        const users = await db.collection('users').find(filter).sort({ createdAt: -1 }).project({ passwordHash: 0, otp: 0, otpExpires: 0 }).toArray();
-        return { users: users.map(serializeUser) };
+        const db = getDb();
+        let q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+        // Firestore doesn't support regex search. A more complex search would need a third-party service like Algolia.
+        // For this app, we will filter after fetching if a query is provided.
+        const querySnapshot = await getDocs(q);
+        let users = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        if (queryString) {
+            users = users.filter(user => user.email.toLowerCase().includes(queryString.toLowerCase()));
+        }
+        
+        return { users: users.map(u => ({...u, _id: u.id, createdAt: u.createdAt.toDate().toISOString() })) };
     } catch (error) {
         console.error('Error listing users:', error);
         return { error: 'Could not list users.' };
@@ -575,27 +537,21 @@ export async function listUsers(query?: string): Promise<{users?: any[], error?:
 
 export async function getUserDetails(userId: string): Promise<{user?: any, error?: string}> {
     try {
-        const db = await getDb();
-        if (!ObjectId.isValid(userId)) return { error: 'Invalid user ID.' };
-        
-        const userPipeline = [
-            { $match: { _id: new ObjectId(userId) } },
-            {
-                $lookup: {
-                    from: 'chatbots',
-                    localField: '_id',
-                    foreignField: 'userId',
-                    as: 'chatbots'
-                }
-            }
-        ];
+        const db = getDb();
+        const userRef = doc(db, 'users', userId);
+        const userSnap = await getDoc(userRef);
 
-        const results = await db.collection('users').aggregate(userPipeline).toArray();
-        const user = results[0];
+        if (!userSnap.exists()) return { error: 'User not found.' };
 
-        if (!user) return { error: 'User not found.' };
+        const chatbotsQuery = query(collection(db, 'chatbots'), where('userId', '==', userId));
+        const chatbotsSnap = await getDocs(chatbotsQuery);
         
-        return { user: serializeUser(user) };
+        const chatbots = chatbotsSnap.docs.map(serializeChatbot);
+        
+        const user = serializeUser(userSnap);
+        user.chatbots = chatbots;
+        
+        return { user };
     } catch (error) {
         console.error('Error getting user details:', error);
         return { error: 'Could not retrieve user details.' };
@@ -605,10 +561,8 @@ export async function getUserDetails(userId: string): Promise<{user?: any, error
 
 export async function updateUserStatus(userId: string, isBanned: boolean): Promise<{success?: boolean, error?: string}> {
     try {
-        const db = await getDb();
-        if (!ObjectId.isValid(userId)) return { error: 'Invalid user ID.' };
-        const result = await db.collection('users').updateOne({ _id: new ObjectId(userId) }, { $set: { isBanned } });
-        if (result.matchedCount === 0) return { error: 'User not found.' };
+        const db = getDb();
+        await updateDoc(doc(db, 'users', userId), { isBanned });
         return { success: true };
     } catch (error) {
         console.error('Error updating user status:', error);
@@ -630,13 +584,8 @@ export async function updateUserPlanAndLimit(values: z.infer<typeof updateUserPl
     }
     const { userId, plan, messageLimit, chatbotLimit } = validation.data;
     try {
-        const db = await getDb();
-        if (!ObjectId.isValid(userId)) return { error: 'Invalid user ID.' };
-        const result = await db.collection('users').updateOne(
-            { _id: new ObjectId(userId) },
-            { $set: { plan, messageLimit, chatbotLimit } }
-        );
-        if (result.matchedCount === 0) return { error: 'User not found.' };
+        const db = getDb();
+        await updateDoc(doc(db, 'users', userId), { plan, messageLimit, chatbotLimit });
         return { success: true };
     } catch (error) {
         console.error('Error updating user plan:', error);
@@ -646,11 +595,9 @@ export async function updateUserPlanAndLimit(values: z.infer<typeof updateUserPl
 
 export async function regenerateUserApiKey(chatbotId: string): Promise<{success?: boolean, newApiKey?: string, error?: string}> {
     try {
-        const db = await getDb();
-        if (!ObjectId.isValid(chatbotId)) return { error: 'Invalid chatbot ID.' };
+        const db = getDb();
         const newApiKey = generateApiKey();
-        const result = await db.collection('chatbots').updateOne({ _id: new ObjectId(chatbotId) }, { $set: { apiKey: newApiKey } });
-        if (result.matchedCount === 0) return { error: 'Chatbot not found.' };
+        await updateDoc(doc(db, 'chatbots', chatbotId), { apiKey: newApiKey });
         return { success: true, newApiKey };
     } catch (error) {
         console.error('Error regenerating API key:', error);
@@ -660,10 +607,8 @@ export async function regenerateUserApiKey(chatbotId: string): Promise<{success?
 
 export async function deleteUserChatbot(chatbotId: string): Promise<{success?: boolean, error?: string}> {
     try {
-        const db = await getDb();
-        if (!ObjectId.isValid(chatbotId)) return { error: 'Invalid chatbot ID.' };
-        const result = await db.collection('chatbots').deleteOne({ _id: new ObjectId(chatbotId) });
-        if (result.deletedCount === 0) return { error: 'Chatbot not found.' };
+        const db = getDb();
+        await deleteDoc(doc(db, 'chatbots', chatbotId));
         return { success: true };
     } catch (error) {
         console.error('Error deleting chatbot:', error);
@@ -673,14 +618,18 @@ export async function deleteUserChatbot(chatbotId: string): Promise<{success?: b
 
 export async function deleteUser(userId: string): Promise<{success?: boolean, error?: string}> {
     try {
-        const db = await getDb();
-        if (!ObjectId.isValid(userId)) return { error: 'Invalid user ID.' };
+        const db = getDb();
+        const batch = writeBatch(db);
+
+        // Delete the user
+        batch.delete(doc(db, 'users', userId));
+
+        // Delete their chatbots
+        const chatbotsQuery = query(collection(db, 'chatbots'), where('userId', '==', userId));
+        const chatbotsSnap = await getDocs(chatbotsQuery);
+        chatbotsSnap.forEach(doc => batch.delete(doc.ref));
         
-        // Also delete their chatbots
-        await db.collection('chatbots').deleteMany({ userId: new ObjectId(userId) });
-        
-        const result = await db.collection('users').deleteOne({ _id: new ObjectId(userId) });
-        if (result.deletedCount === 0) return { error: 'User not found.' };
+        await batch.commit();
 
         return { success: true };
     } catch (error) {
@@ -735,7 +684,7 @@ export async function sendEmailToAllUsers(values: z.infer<typeof bulkEmailSchema
         await sendBulkEmail({
             to: recipients,
             subject: values.subject,
-            html: values.message, // Assuming message is HTML content
+            html: values.message,
         });
 
         return { success: true, userCount: users.length };
@@ -749,26 +698,26 @@ export async function sendEmailToAllUsers(values: z.infer<typeof bulkEmailSchema
 // --- Admin Dashboard Actions ---
 export async function getDashboardStats(): Promise<any> {
     try {
-      const db = await getDb();
+      const db = getDb();
   
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const sevenDaysAgo = Timestamp.fromDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
   
-      const totalUsers = await db.collection('users').countDocuments();
-      const newUsers = await db.collection('users').countDocuments({ createdAt: { $gte: sevenDaysAgo } });
-      const totalSubmissions = await db.collection('submissions').countDocuments();
-      const recentSubmissions = await db.collection('submissions').find().sort({ createdAt: -1 }).limit(5).toArray();
-      
-      const userSignupsByDay = await db.collection('users').aggregate([
-        { $match: { createdAt: { $gte: sevenDaysAgo } } },
-        {
-          $group: {
-            _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
-            count: { $sum: 1 },
-          },
-        },
-        { $sort: { _id: 1 } },
-      ]).toArray();
+      const usersSnap = await getDocs(collection(db, 'users'));
+      const newUsersQuery = query(collection(db, 'users'), where('createdAt', '>=', sevenDaysAgo));
+      const newUsersSnap = await getDocs(newUsersQuery);
+      const submissionsSnap = await getDocs(collection(db, 'submissions'));
+
+      const recentSubmissionsQuery = query(collection(db, 'submissions'), orderBy('createdAt', 'desc'), firestoreLimit(5));
+      const recentSubmissionsSnap = await getDocs(recentSubmissionsQuery);
+      const recentSubmissions = recentSubmissionsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      const userSignupsByDayQuery = query(collection(db, 'users'), where('createdAt', '>=', sevenDaysAgo));
+      const userSignupsSnap = await getDocs(userSignupsByDayQuery);
+      const signupsByDate: { [key: string]: number } = {};
+      userSignupsSnap.forEach(doc => {
+          const dateString = doc.data().createdAt.toDate().toISOString().split('T')[0];
+          signupsByDate[dateString] = (signupsByDate[dateString] || 0) + 1;
+      });
   
       // Format chart data
       const signupChartData = [];
@@ -776,20 +725,19 @@ export async function getDashboardStats(): Promise<any> {
         const d = new Date();
         d.setDate(d.getDate() - i);
         const dateString = d.toISOString().split('T')[0];
-        const dayData = userSignupsByDay.find(day => day._id === dateString);
         signupChartData.push({
           date: dateString,
-          signups: dayData ? dayData.count : 0,
+          signups: signupsByDate[dateString] || 0,
         });
       }
   
       return {
         stats: {
-          totalUsers,
-          newUsers,
-          totalSubmissions,
+          totalUsers: usersSnap.size,
+          newUsers: newUsersSnap.size,
+          totalSubmissions: submissionsSnap.size,
         },
-        recentSubmissions: recentSubmissions.map(s => ({ ...s, _id: s._id.toString() })),
+        recentSubmissions: recentSubmissions.map(s => ({ ...s, _id: s.id, createdAt: s.createdAt.toDate().toISOString() })),
         signupChartData,
       };
     } catch (error) {
@@ -822,14 +770,15 @@ export async function subscribeToNewsletter(email: string): Promise<{success: bo
     }
 
     try {
-        const db = await getDb();
-        const existing = await db.collection('subscribers').findOne({ email });
-        if (existing) {
+        const db = getDb();
+        const q = query(collection(db, 'subscribers'), where('email', '==', email));
+        const existing = await getDocs(q);
+        if (!existing.empty) {
             return { success: false, error: 'This email is already subscribed.' };
         }
-        await db.collection('subscribers').insertOne({
+        await addDoc(collection(db, 'subscribers'), {
             email,
-            subscribedAt: new Date(),
+            subscribedAt: Timestamp.now(),
         });
         return { success: true };
     } catch (error) {
@@ -840,9 +789,11 @@ export async function subscribeToNewsletter(email: string): Promise<{success: bo
 
 export async function listSubscribers(): Promise<{subscribers?: any[], error?: string}> {
     try {
-        const db = await getDb();
-        const subscribers = await db.collection('subscribers').find().sort({ subscribedAt: -1 }).toArray();
-        return { subscribers: subscribers.map(s => ({...s, _id: s._id.toString()})) };
+        const db = getDb();
+        const q = query(collection(db, 'subscribers'), orderBy('subscribedAt', 'desc'));
+        const querySnapshot = await getDocs(q);
+        const subscribers = querySnapshot.docs.map(doc => ({...doc.data(), _id: doc.id, subscribedAt: doc.data().subscribedAt.toDate().toISOString()}));
+        return { subscribers };
     } catch (error) {
         console.error('Error listing subscribers:', error);
         return { error: 'Could not list subscribers.' };
@@ -937,9 +888,8 @@ export async function getLiveDemoResponse(message: string, history: any[]): Prom
     }
 
     try {
-        // Ensure history items are correctly formatted
         const formattedHistory = history
-            .filter(item => typeof item.text === 'string' && item.role) // Ensure content is a string and role exists
+            .filter(item => typeof item.text === 'string' && item.role) 
             .map(item => ({
                 role: item.role === 'user' ? 'user' : 'model',
                 content: [{ text: item.text as string }]
@@ -948,7 +898,7 @@ export async function getLiveDemoResponse(message: string, history: any[]): Prom
         const response = await generateChatResponse({
             message: message,
             instructions: "You are a friendly and helpful assistant for ChatForge AI, a platform that lets users build and deploy chatbots. Briefly answer questions about the product's features, pricing, and ease of use. Keep your answers concise and encouraging. If asked about something unrelated, politely steer the conversation back to ChatForge AI.",
-            qa: [], // No custom Q&A for the public demo
+            qa: [],
             history: formattedHistory,
         });
         return { reply: response.reply };
@@ -959,19 +909,21 @@ export async function getLiveDemoResponse(message: string, history: any[]): Prom
     }
 }
 
-// --- OTP/JWT Actions (from previous implementation) ---
-
 export async function findOrCreateUserFromGoogle(profile: any): Promise<{token?: string, error?: string}> {
     if (!profile || !profile.email) {
       return { error: 'Google profile is missing email.' };
     }
   
     try {
-      const db = await getDb();
-      const users = db.collection('users');
-      let user = await users.findOne({ email: profile.email });
-  
-      if (!user) {
+      const db = getDb();
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('email', '==', profile.email));
+      const querySnapshot = await getDocs(q);
+      
+      let user;
+      let userDocRef;
+      
+      if (querySnapshot.empty) {
         // User does not exist, create a new one
         const newUser = {
             email: profile.email,
@@ -980,24 +932,31 @@ export async function findOrCreateUserFromGoogle(profile: any): Promise<{token?:
             authMethod: 'google',
             isVerified: true, // Google accounts are pre-verified
             isBanned: false,
-            createdAt: new Date(),
+            createdAt: Timestamp.now(),
             messagesSent: 0,
             messageLimit: 1000,
             chatbotLimit: 1,
             plan: 'Free',
-            planCycleStartDate: new Date(),
+            planCycleStartDate: Timestamp.now(),
         };
-        const result = await users.insertOne(newUser);
-        await createDefaultChatbot(db, null, result.insertedId); // Can't use session here
-        user = await users.findOne({ _id: result.insertedId });
+
+        const batch = writeBatch(db);
+        userDocRef = doc(collection(db, "users"));
+        batch.set(userDocRef, newUser);
+        await createDefaultChatbot(db, batch, userDocRef.id);
+        await batch.commit();
+
+        user = { id: userDocRef.id, ...newUser };
 
       } else {
-        // User exists, potentially update their info
+        const userDoc = querySnapshot.docs[0];
+        user = { id: userDoc.id, ...userDoc.data() };
+        userDocRef = userDoc.ref;
+        
         if (user.authMethod !== 'google') {
             return { error: 'This email is already registered with a password. Please log in with your password.' };
         }
-        // Optionally update name/avatar on each login
-        await users.updateOne({ _id: user._id }, { $set: { name: profile.name, avatar: profile.picture } });
+        await updateDoc(userDocRef, { name: profile.name, avatar: profile.picture });
         user = {...user, name: profile.name, avatar: profile.picture};
       }
       
@@ -1012,4 +971,4 @@ export async function findOrCreateUserFromGoogle(profile: any): Promise<{token?:
       console.error('Google user find/create error:', error);
       return { error: 'An unexpected database error occurred.' };
     }
-  }
+}

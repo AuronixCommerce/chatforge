@@ -1,0 +1,97 @@
+{
+  "entities": {
+    "user": {
+      "title": "User",
+      "description": "Represents a user account in the system.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "passwordHash": { "type": "string" },
+        "name": { "type": "string" },
+        "avatar": { "type": "string", "format": "uri" },
+        "isVerified": { "type": "boolean" },
+        "isBanned": { "type": "boolean" },
+        "authMethod": { "type": "string", "enum": ["email", "google"] },
+        "otp": { "type": "string" },
+        "otpExpires": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "messagesSent": { "type": "number" },
+        "messageLimit": { "type": "number" },
+        "chatbotLimit": { "type": "number" },
+        "plan": { "type": "string", "enum": ["Free", "Pro", "Enterprise"] },
+        "planCycleStartDate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "authMethod", "isVerified", "createdAt", "plan"]
+    },
+    "chatbot": {
+      "title": "Chatbot",
+      "description": "Represents an individual chatbot configuration.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "instructions": { "type": "string" },
+        "qa": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "question": { "type": "string" },
+              "answer": { "type": "string" }
+            },
+            "required": ["question", "answer"]
+          }
+        },
+        "welcomeMessage": { "type": "string" },
+        "color": { "type": "string" },
+        "apiKey": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "authorizedDomains": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["userId", "name", "apiKey", "createdAt"]
+    },
+    "submission": {
+      "title": "Submission",
+      "description": "Represents a sales or contact submission.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "company": { "type": "string" },
+        "plan": { "type": "string", "enum": ["Pro", "Enterprise"] },
+        "message": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "plan", "message", "status", "createdAt"]
+    },
+    "subscriber": {
+        "title": "Subscriber",
+        "description": "A user subscribed to the newsletter.",
+        "type": "object",
+        "properties": {
+            "email": { "type": "string", "format": "email" },
+            "subscribedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["email", "subscribedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/user" },
+      "description": "Stores individual user profiles."
+    },
+    "/chatbots/{chatbotId}": {
+      "schema": { "$ref": "#/entities/chatbot" },
+      "description": "Stores configurations for each chatbot."
+    },
+    "/submissions/{submissionId}": {
+      "schema": { "$ref": "#/entities/submission" },
+      "description": "Stores contact and sales submissions."
+    },
+    "/subscribers/{subscriberId}": {
+        "schema": { "$ref": "#/entities/subscriber" },
+        "description": "Stores newsletter subscribers."
+    }
+  }
+}
