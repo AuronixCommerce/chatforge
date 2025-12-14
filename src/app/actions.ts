@@ -121,7 +121,7 @@ function generateApiKey() {
     return `cfai_${randomBytes(16).toString('hex')}`;
 }
 
-async function createDefaultChatbot(db: Firestore, batch: any, userId: string) {
+async function createDefaultChatbot(db: any, batch: any, userId: string) {
     const defaultBot = {
         userId,
         name: 'My First Bot',
@@ -268,7 +268,7 @@ export async function customLogin(values: z.infer<typeof loginSchema>) {
         return { success: true, token };
     } catch (error: any) {
         console.error('Login error:', error);
-        return { error: { _errors: [`An unexpected error occurred: ${error.message}`] } };
+        return { error: { _errors: [`An unexpected error occurred.`] } };
     }
 }
 
