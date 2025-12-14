@@ -3,7 +3,7 @@
 import 'dotenv/config';
 import { z } from 'zod';
 import { getDb } from '@/lib/mongodb';
-import { ObjectId } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 import { randomBytes, createHmac } from 'crypto';
 import { sendOtpEmail, sendSubmissionStatusEmail, sendBulkEmail, sendDirectUserEmail } from '@/lib/nodemailer';
 import jwt from 'jsonwebtoken';
@@ -129,7 +129,7 @@ function generateApiKey() {
     return `cfai_${randomBytes(16).toString('hex')}`;
 }
 
-async function createDefaultChatbot(db: any, userId: ObjectId) {
+async function createDefaultChatbot(db: any, session: any, userId: ObjectId) {
     const defaultBot = {
         userId,
         name: 'My First Bot',
@@ -141,7 +141,7 @@ async function createDefaultChatbot(db: any, userId: ObjectId) {
         createdAt: new Date(),
         authorizedDomains: [],
     };
-    await db.collection('chatbots').insertOne(defaultBot);
+    await db.collection('chatbots').insertOne(defaultBot, { session });
 }
 
 const signUpSchema = z.object({
@@ -158,46 +158,79 @@ export async function customSignUp(values: z.infer<typeof signUpSchema>) {
 
     const { email, password } = validation.data;
     
+    let client: MongoClient | null = null;
+    let session;
     try {
         const db = await getDb();
+        client = db.client;
+        session = client.startSession();
 
-        const existingUser = await db.collection('users').findOne({ email });
-        if (existingUser) {
-            return { error: { email: ['A user with this email already exists.'] } };
+        let userId;
+
+        await session.withTransaction(async () => {
+            const existingUser = await db.collection('users').findOne({ email }, { session });
+            if (existingUser) {
+                // We must abort the transaction and throw an error that we can catch
+                throw new Error('A user with this email already exists.');
+            }
+            
+            const otp = randomBytes(3).toString('hex').toUpperCase();
+            const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // OTP expires in 10 minutes
+
+            const salt = randomBytes(16).toString('hex');
+            const hash = createHmac('sha256', salt).update(password).digest('hex');
+            
+            const newUser = {
+                email,
+                passwordHash: `${salt}:${hash}`,
+                isVerified: false,
+                isBanned: false,
+                authMethod: 'email',
+                otp,
+                otpExpires,
+                createdAt: new Date(),
+                messagesSent: 0,
+                messageLimit: 1000,
+                chatbotLimit: 1,
+                plan: 'Free',
+                planCycleStartDate: new Date(),
+            };
+
+            const result = await db.collection('users').insertOne(newUser, { session });
+            userId = result.insertedId;
+
+            // Create the default chatbot within the same transaction
+            await createDefaultChatbot(db, session, userId);
+            
+            // Send email after we are sure the transaction will commit
+            await sendOtpEmail(email, otp);
+        });
+        
+        await session.commitTransaction();
+
+        if (!userId) {
+            // This should not happen if the transaction is successful, but it's a safeguard.
+            throw new Error('User creation failed, but transaction did not throw.');
         }
-        
-        const otp = randomBytes(3).toString('hex').toUpperCase();
-        const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // OTP expires in 10 minutes
 
-        const salt = randomBytes(16).toString('hex');
-        const hash = createHmac('sha256', salt).update(password).digest('hex');
-        
-        const newUser = {
-            email,
-            passwordHash: `${salt}:${hash}`,
-            isVerified: false,
-            isBanned: false,
-            authMethod: 'email',
-            otp,
-            otpExpires,
-            createdAt: new Date(),
-            messagesSent: 0,
-            messageLimit: 1000,
-            chatbotLimit: 1,
-            plan: 'Free',
-            planCycleStartDate: new Date(),
-        };
-
-        const result = await db.collection('users').insertOne(newUser);
-        
-        await createDefaultChatbot(db, result.insertedId);
-        await sendOtpEmail(email, otp);
-
-        return { success: true, userId: result.insertedId.toString() };
+        return { success: true, userId: userId.toString() };
 
     } catch (error: any) {
-        console.error('Sign up error:', error);
-        return { error: { _errors: [`Could not create your account: ${error.message}`] } };
+        console.error('Sign up transaction error:', error);
+        
+        if (session && session.inTransaction()) {
+            await session.abortTransaction();
+        }
+        
+        if (error.message === 'A user with this email already exists.') {
+            return { error: { email: [error.message] } };
+        }
+
+        return { error: { _errors: [`Could not create your account: An unexpected database error occurred.`] } };
+    } finally {
+        if(session) {
+            await session.endSession();
+        }
     }
 }
 
@@ -307,7 +340,7 @@ export async function verifyOtp(values: z.infer<typeof otpSchema>) {
         }
 
         const token = generateToken(verifiedUser);
-        return { success: true, token, email: verifiedUser.email };
+        return { success: true, token };
     } catch (error: any) {
         console.error('OTP verification error:', error);
         return { error: { _errors: [`An unexpected error occurred: ${error.message}`] } };
@@ -922,3 +955,58 @@ export async function getLiveDemoResponse(message: string, history: any[]): Prom
         return { error: `Sorry, an error occurred: ${error.message}` };
     }
 }
+
+// --- OTP/JWT Actions (from previous implementation) ---
+
+export async function findOrCreateUserFromGoogle(profile: any): Promise<{token?: string, error?: string}> {
+    if (!profile || !profile.email) {
+      return { error: 'Google profile is missing email.' };
+    }
+  
+    try {
+      const db = await getDb();
+      const users = db.collection('users');
+      let user = await users.findOne({ email: profile.email });
+  
+      if (!user) {
+        // User does not exist, create a new one
+        const newUser = {
+            email: profile.email,
+            name: profile.name,
+            avatar: profile.picture,
+            authMethod: 'google',
+            isVerified: true, // Google accounts are pre-verified
+            isBanned: false,
+            createdAt: new Date(),
+            messagesSent: 0,
+            messageLimit: 1000,
+            chatbotLimit: 1,
+            plan: 'Free',
+            planCycleStartDate: new Date(),
+        };
+        const result = await users.insertOne(newUser);
+        await createDefaultChatbot(db, null, result.insertedId); // Can't use session here
+        user = await users.findOne({ _id: result.insertedId });
+
+      } else {
+        // User exists, potentially update their info
+        if (user.authMethod !== 'google') {
+            return { error: 'This email is already registered with a password. Please log in with your password.' };
+        }
+        // Optionally update name/avatar on each login
+        await users.updateOne({ _id: user._id }, { $set: { name: profile.name, avatar: profile.picture } });
+        user = {...user, name: profile.name, avatar: profile.picture};
+      }
+      
+      if (!user) {
+        return { error: 'Could not find or create user.' };
+      }
+
+      const token = generateToken(user);
+      return { token };
+  
+    } catch (error) {
+      console.error('Google user find/create error:', error);
+      return { error: 'An unexpected database error occurred.' };
+    }
+  }
