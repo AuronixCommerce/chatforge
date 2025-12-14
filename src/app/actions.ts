@@ -212,6 +212,9 @@ const loginSchema = z.object({
 });
 
 function generateToken(user: any) {
+    if (!user || !user._id) {
+        throw new Error('Invalid user object for token generation');
+    }
     const payload = {
         id: user._id.toString(),
         email: user.email,
@@ -298,11 +301,16 @@ export async function verifyOtp(values: z.infer<typeof otpSchema>) {
     }
     
     await db.collection('users').updateOne({ _id: user._id }, { $set: { isVerified: true, otp: null, otpExpires: null }});
+    
+    // Re-fetch the user to get the latest state
+    const verifiedUser = await db.collection('users').findOne({ _id: user._id });
 
-    const foundUser = await db.collection('users').findOne({ _id: user._id });
+    if (!verifiedUser) {
+        return { error: { _errors: ['Could not find user after verification.'] } };
+    }
 
-    const token = generateToken(foundUser);
-    return { success: true, token, email: foundUser?.email };
+    const token = generateToken(verifiedUser);
+    return { success: true, token, email: verifiedUser.email };
 }
 
 export async function resendOtp(userId: string) {

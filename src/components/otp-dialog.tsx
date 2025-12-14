@@ -34,7 +34,7 @@ const formSchema = z.object({
 interface OtpDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (token: string, email: string) => void;
+  onSuccess: (token: string) => void;
   userId: string;
 }
 
@@ -65,8 +65,8 @@ export default function OtpDialog({ isOpen, onClose, onSuccess, userId }: OtpDia
         const result = await verifyOtp({ ...values, userId });
         if (result.error) {
             form.setError('otp', { message: result.error.otp?.[0] || 'Verification failed.' });
-        } else if (result.token && result.email) {
-            onSuccess(result.token, result.email);
+        } else if (result.token) {
+            onSuccess(result.token);
         }
     } catch (error) {
         toast({ title: 'Verification Failed', description: 'An unexpected error occurred.', variant: 'destructive' });
@@ -120,7 +120,7 @@ export default function OtpDialog({ isOpen, onClose, onSuccess, userId }: OtpDia
               )}
             />
             <DialogFooter className="flex-col space-y-2 sm:flex-row sm:space-y-0">
-                <Button type="button" variant="ghost" onClick={handleResendOtp} disabled={resendTimer > 0}>
+                <Button type="button" variant="ghost" onClick={handleResendOtp} disabled={isLoading || resendTimer > 0}>
                     {resendTimer > 0 ? `Resend in ${resendTimer}s` : 'Resend OTP'}
                 </Button>
                 <Button type="submit" disabled={isLoading}>

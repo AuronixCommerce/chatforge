@@ -51,6 +51,7 @@ export default function SignupPage() {
 
   const handleRedirect = () => {
     router.push('/dashboard');
+    router.refresh();
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -78,7 +79,7 @@ export default function SignupPage() {
   }
 
   const onOtpSuccess = (token: string) => {
-    toast({ title: 'Account Created!', description: 'Welcome to your dashboard.' });
+    toast({ title: 'Account Verified!', description: 'Welcome to your dashboard.' });
     setShowOtpDialog(false);
     login(token);
     handleRedirect();

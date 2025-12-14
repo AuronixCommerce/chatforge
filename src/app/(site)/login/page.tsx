@@ -48,6 +48,7 @@ export default function LoginPage() {
 
   const handleRedirect = () => {
     router.push('/dashboard');
+    router.refresh(); // Force a refresh to ensure layout recognizes auth state
   }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -56,6 +57,7 @@ export default function LoginPage() {
     try {
         const result = await customLogin(values);
         if (result.error) {
+            toast({ title: 'Login Failed', description: result.error._errors?.join(', ') || 'Invalid credentials.', variant: 'destructive' });
             form.setError('root', { message: result.error._errors?.join(', ') || 'Login failed.' });
         } else if (result.requiresOtp && result.userId) {
             toast({
