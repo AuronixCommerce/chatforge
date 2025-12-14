@@ -1,3 +1,4 @@
+
 // src/app/actions.ts
 'use server';
 import 'dotenv/config';
@@ -206,7 +207,9 @@ export async function customSignUp(values: z.infer<typeof signUpSchema>) {
             await sendOtpEmail(email, otp);
         });
         
-        await session.commitTransaction();
+        if (session.inTransaction()) {
+           await session.commitTransaction();
+        }
 
         if (!userId) {
             // This should not happen if the transaction is successful, but it's a safeguard.

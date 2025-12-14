@@ -71,7 +71,7 @@ export default function SignupPage() {
         setShowOtpDialog(true);
       }
     } catch (error) {
-      toast({ title: 'Sign Up Failed', description: 'An unexpected error occurred on the client.', variant: 'destructive' });
+      toast({ title: 'Sign Up Failed', description: 'An unexpected client error occurred.', variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }

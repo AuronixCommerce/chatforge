@@ -1,3 +1,4 @@
+
 // src/lib/mongodb.ts
 import { MongoClient, Db } from 'mongodb';
 import 'dotenv/config';
@@ -54,6 +55,7 @@ export async function getDb(): Promise<Db> {
             // This error will only be thrown if server-side code *during the build*
             // tries to perform a database operation (e.g., in getServerSideProps).
             // For static pages, this part of the code is not reached.
+            if(prop === 'client') return new Proxy({}, { get: () => { throw new Error('DB client accessed during build without MONGODB_URI'); }});
             throw new Error(`Database operation '${String(prop)}' attempted during build without a MONGODB_URI.`);
         }
     });
