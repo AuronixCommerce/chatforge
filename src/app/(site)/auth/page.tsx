@@ -25,6 +25,7 @@ import OtpDialog from '@/components/otp-dialog';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { motion, AnimatePresence } from 'framer-motion';
+import Auth3DScene from '@/components/auth-3d-scene';
 
 const loginSchema = z.object({
     email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -134,10 +135,11 @@ export default function AuthPage() {
 
     return (
       <>
-        <div className="relative min-h-[calc(100vh-8rem)] w-full overflow-hidden bg-gradient-to-br from-background to-secondary/20">
+        <div className="relative min-h-[calc(100vh-8rem)] w-full overflow-hidden bg-background">
             <div className="absolute inset-0 z-0">
-                <div className="absolute top-0 right-0 -mr-48 -mt-48 h-[500px] w-[500px] rounded-full bg-primary/10 blur-3xl animate-pulse"></div>
-                <div className="absolute bottom-0 left-0 -mb-48 -ml-48 h-[500px] w-[500px] rounded-full bg-accent/10 blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+                <Suspense fallback={<div className="bg-background" />}>
+                    <Auth3DScene />
+                </Suspense>
             </div>
             <div className="container relative z-10 py-12 flex items-center justify-center min-h-[calc(100vh-8rem)]">
                 <div className="relative w-full max-w-md h-[720px]" style={{ perspective: '1200px' }}>
