@@ -167,14 +167,14 @@ export default function AuthPage() {
                 )}
                  {field === 'email' && (
                     <motion.div {...commonProps('email')}>
-                         <FormField control={mode === 'signup' ? signupForm.control : loginForm.control} name="email" render={({ field }) => (
+                         <FormField control={activeForm.control} name="email" render={({ field }) => (
                             <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="name@yourcompany.com" {...field} autoFocus /></FormControl><FormMessage /></FormItem>
                         )}/>
                     </motion.div>
                 )}
                 {field === 'password' && (
                      <motion.div {...commonProps('password')}>
-                         <FormField control={mode === 'signup' ? signupForm.control : loginForm.control} name="password" render={({ field }) => (
+                         <FormField control={activeForm.control} name="password" render={({ field }) => (
                             <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} autoFocus /></FormControl><FormMessage /></FormItem>
                         )}/>
                     </motion.div>
@@ -345,5 +345,3 @@ export default function AuthPage() {
       </>
     );
 }
-
-    
