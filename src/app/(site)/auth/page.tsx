@@ -135,17 +135,79 @@ export default function AuthPage() {
         animate: { rotateY: 0, opacity: 1, scale: 1, transition: { duration: 0.4, ease: 'easeOut' } },
         exit: { rotateY: 90, opacity: 0, scale: 0.95, transition: { duration: 0.4, ease: 'easeIn' } },
     };
+
+    const FocusedView = ({ field }: { field: ActiveField }) => {
+        if (!field) return null;
     
-    const fieldVariants = {
-        initial: { scale: 1 },
-        active: { scale: 1.05, transition: { duration: 0.2 } },
-        inactive: { scale: 1, transition: { duration: 0.2 } },
-    };
+        const commonProps = (fieldName: ActiveField) => ({
+            layoutId: fieldName,
+            initial: { opacity: 0 },
+            animate: { opacity: 1 },
+            exit: { opacity: 0 },
+            className: "w-full max-w-sm"
+        });
+    
+        return (
+            <motion.div
+                className="fixed inset-0 z-20 flex items-center justify-center"
+                onClick={() => setActiveField(null)}
+            >
+                {field === 'name' && (
+                    <motion.div {...commonProps('name')}>
+                         <FormField control={signupForm.control} name="name" render={({ field }) => (
+                            <FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="Your Name" {...field} autoFocus /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                    </motion.div>
+                )}
+                 {field === 'email' && (
+                    <motion.div {...commonProps('email')}>
+                         <FormField control={mode === 'signup' ? signupForm.control : loginForm.control} name="email" render={({ field }) => (
+                            <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="name@yourcompany.com" {...field} autoFocus /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                    </motion.div>
+                )}
+                {field === 'password' && (
+                     <motion.div {...commonProps('password')}>
+                         <FormField control={mode === 'signup' ? signupForm.control : loginForm.control} name="password" render={({ field }) => (
+                            <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} autoFocus /></FormControl><FormMessage /></FormItem>
+                        )}/>
+                    </motion.div>
+                )}
+                 {field === 'terms' && (
+                     <motion.div {...commonProps('terms')}>
+                         <FormField control={signupForm.control} name="terms" render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-background/50"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange}/></FormControl>
+                            <div className="space-y-1 leading-none">
+                                <FormLabel>
+                                    I agree to the{' '}
+                                    <LegalDialog doc="terms">
+                                        <span className="font-semibold text-primary hover:underline cursor-pointer">Terms</span>
+                                    </LegalDialog>
+                                    {' '} & {' '}
+                                    <LegalDialog doc="privacy">
+                                        <span className="font-semibold text-primary hover:underline cursor-pointer">Privacy Policy</span>
+                                    </LegalDialog>
+                                    .
+                                </FormLabel>
+                                <FormMessage />
+                            </div>
+                            </FormItem>
+                        )}/>
+                    </motion.div>
+                )}
+                 {field === 'submit' && (
+                     <motion.div {...commonProps('submit')}>
+                        <Button type="submit" className="w-full h-12 text-lg" disabled={isLoading}>{isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{mode === 'signup' ? 'Create Account' : 'Log In'}</Button>
+                    </motion.div>
+                )}
+            </motion.div>
+        )
+    }
 
     return (
       <>
         <div className="relative min-h-[calc(100vh-8rem)] w-full overflow-hidden bg-background">
-            <motion.div 
+             <motion.div 
                 className="absolute inset-0 z-0"
                 animate={{ filter: activeField ? 'blur(8px)' : 'blur(0px)'}}
                 transition={{ duration: 0.3 }}
@@ -154,8 +216,13 @@ export default function AuthPage() {
                     <Auth3DScene />
                 </Suspense>
             </motion.div>
-            <div className="container relative z-10 py-12 flex items-center justify-center min-h-[calc(100vh-8rem)]" onClick={() => setActiveField(null)}>
-                <div className="relative w-full max-w-md h-[720px]" style={{ perspective: '1200px' }} onClick={(e) => e.stopPropagation()}>
+            
+            <AnimatePresence>
+                {activeField && <FocusedView field={activeField}/>}
+            </AnimatePresence>
+
+            <div className="container relative z-10 py-12 flex items-center justify-center min-h-[calc(100vh-8rem)]">
+                <div className="relative w-full max-w-md h-[720px]" style={{ perspective: '1200px' }}>
                     <AnimatePresence initial={false} mode="wait">
                         <motion.div
                             key={mode}
@@ -174,24 +241,24 @@ export default function AuthPage() {
                                 <CardContent>
                                     <Form {...signupForm}>
                                         <form onSubmit={signupForm.handleSubmit(handleSignupSubmit)} className="space-y-4">
-                                            <motion.div variants={fieldVariants} animate={activeField === 'name' ? 'active' : 'inactive'}>
+                                            <motion.div layoutId="name" onClick={() => setActiveField('name')} style={{ opacity: activeField === 'name' ? 0 : 1 }}>
                                                 <FormField control={signupForm.control} name="name" render={({ field }) => (
-                                                    <FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="Your Name" {...field} onFocus={() => setActiveField('name')} /></FormControl><FormMessage /></FormItem>
+                                                    <FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="Your Name" {...field} readOnly /></FormControl><FormMessage /></FormItem>
                                                 )}/>
                                             </motion.div>
-                                            <motion.div variants={fieldVariants} animate={activeField === 'email' ? 'active' : 'inactive'}>
+                                            <motion.div layoutId="email" onClick={() => setActiveField('email')} style={{ opacity: activeField === 'email' ? 0 : 1 }}>
                                             <FormField control={signupForm.control} name="email" render={({ field }) => (
-                                                <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="name@yourcompany.com" {...field} onFocus={() => setActiveField('email')} /></FormControl><FormMessage /></FormItem>
+                                                <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="name@yourcompany.com" {...field} readOnly /></FormControl><FormMessage /></FormItem>
                                             )}/>
                                             </motion.div>
-                                            <motion.div variants={fieldVariants} animate={activeField === 'password' ? 'active' : 'inactive'}>
+                                            <motion.div layoutId="password" onClick={() => setActiveField('password')} style={{ opacity: activeField === 'password' ? 0 : 1 }}>
                                             <FormField control={signupForm.control} name="password" render={({ field }) => (
-                                                <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} onFocus={() => setActiveField('password')} /></FormControl><FormMessage /></FormItem>
+                                                <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} readOnly /></FormControl><FormMessage /></FormItem>
                                             )}/>
                                             </motion.div>
-                                            <motion.div variants={fieldVariants} animate={activeField === 'terms' ? 'active' : 'inactive'}>
+                                            <motion.div layoutId="terms" onClick={() => setActiveField('terms')} style={{ opacity: activeField === 'terms' ? 0 : 1 }}>
                                             <FormField control={signupForm.control} name="terms" render={({ field }) => (
-                                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-background/50" onFocus={() => setActiveField('terms')}><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange}/></FormControl>
+                                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-background/50"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange}/></FormControl>
                                                 <div className="space-y-1 leading-none">
                                                     <FormLabel>
                                                         I agree to the{' '}
@@ -209,8 +276,8 @@ export default function AuthPage() {
                                                 </FormItem>
                                             )}/>
                                             </motion.div>
-                                            <motion.div variants={fieldVariants} animate={activeField === 'submit' ? 'active' : 'inactive'}>
-                                                <Button type="submit" className="w-full" disabled={isLoading} onFocus={() => setActiveField('submit')} onBlur={() => setActiveField(null)}>{isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Create Account</Button>
+                                            <motion.div layoutId="submit" onClick={() => setActiveField('submit')} style={{ opacity: activeField === 'submit' ? 0 : 1 }}>
+                                                <Button type="submit" className="w-full" disabled={isLoading} >{isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Create Account</Button>
                                             </motion.div>
                                         </form>
                                     </Form>
@@ -229,19 +296,19 @@ export default function AuthPage() {
                                 <CardContent>
                                     <Form {...loginForm}>
                                         <form onSubmit={loginForm.handleSubmit(handleLoginSubmit)} className="space-y-4">
-                                            <motion.div variants={fieldVariants} animate={activeField === 'email' ? 'active' : 'inactive'}>
+                                            <motion.div layoutId="email" onClick={() => setActiveField('email')} style={{ opacity: activeField === 'email' ? 0 : 1 }}>
                                                 <FormField control={loginForm.control} name="email" render={({ field }) => (
-                                                    <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="name@yourcompany.com" {...field} onFocus={() => setActiveField('email')} /></FormControl><FormMessage /></FormItem>
+                                                    <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="name@yourcompany.com" {...field} readOnly /></FormControl><FormMessage /></FormItem>
                                                 )}/>
                                             </motion.div>
-                                            <motion.div variants={fieldVariants} animate={activeField === 'password' ? 'active' : 'inactive'}>
+                                            <motion.div layoutId="password" onClick={() => setActiveField('password')} style={{ opacity: activeField === 'password' ? 0 : 1 }}>
                                             <FormField control={loginForm.control} name="password" render={({ field }) => (
-                                                <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} onFocus={() => setActiveField('password')} /></FormControl><FormMessage /></FormItem>
+                                                <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} readOnly /></FormControl><FormMessage /></FormItem>
                                             )}/>
                                             </motion.div>
                                             {loginForm.formState.errors.root && <p className="text-sm font-medium text-destructive">{loginForm.formState.errors.root.message}</p>}
-                                            <motion.div variants={fieldVariants} animate={activeField === 'submit' ? 'active' : 'inactive'}>
-                                                <Button type="submit" className="w-full" disabled={isLoading} onFocus={() => setActiveField('submit')} onBlur={() => setActiveField(null)}>{isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Log In</Button>
+                                            <motion.div layoutId="submit" onClick={() => setActiveField('submit')} style={{ opacity: activeField === 'submit' ? 0 : 1 }}>
+                                                <Button type="submit" className="w-full" disabled={isLoading} >{isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Log In</Button>
                                             </motion.div>
                                         </form>
                                     </Form>
