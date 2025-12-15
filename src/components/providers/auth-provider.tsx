@@ -1,9 +1,8 @@
 
-
 // src/components/providers/auth-provider.tsx
 'use client';
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import jwt from 'jsonwebtoken';
+import { decodeJwt } from 'jose';
 
 interface User {
   id: string;
@@ -31,8 +30,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const token = localStorage.getItem(JWT_TOKEN_KEY);
       if (token) {
-        const decoded = jwt.decode(token) as User | null;
-        if (decoded && (decoded as any).exp * 1000 > Date.now()) {
+        const decoded = decodeJwt(token) as User & { exp: number } | null;
+        if (decoded && decoded.exp * 1000 > Date.now()) {
             setUser(decoded);
         } else {
             localStorage.removeItem(JWT_TOKEN_KEY);
@@ -74,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = (token: string) => {
     try {
-        const decoded = jwt.decode(token) as User | null;
+        const decoded = decodeJwt(token) as User | null;
         if (!decoded) {
             logout();
             return;

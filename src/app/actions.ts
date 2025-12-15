@@ -9,7 +9,7 @@ import { randomBytes, createHmac } from 'crypto';
 import { sendOtpEmail, sendSubmissionStatusEmail, sendBulkEmail, sendDirectUserEmail } from '@/lib/nodemailer';
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
-import { generateNewsletterEmail } from '@/ai/flows/generate-chat-response';
+import { generateNewsletterEmail, generateChatResponse } from '@/ai/flows/generate-chat-response';
 import { generateDirectEmail as generateDirectEmailFlow } from '@/ai/flows/generate-direct-email';
 
 
@@ -948,5 +948,38 @@ export async function findOrCreateUserFromGoogle(profile: any): Promise<{token?:
     } catch (error) {
       console.error('Google user find/create error:', error);
       return { error: 'An unexpected database error occurred.' };
+    }
+}
+
+
+type HistoryItem = {
+    role: 'user' | 'model';
+    text: string;
+}
+export async function getLiveDemoResponse(message: string, history: HistoryItem[]): Promise<{reply?: string, error?: string}> {
+    if (!message) {
+        return { error: 'Message cannot be empty.' };
+    }
+
+    try {
+        const historyForApi = history.map(h => ({
+            role: h.role,
+            content: [{ text: h.text }]
+        }));
+
+        const response = await generateChatResponse({
+            message,
+            instructions: "You are a friendly and helpful demo chatbot for a company called ChatForge AI. Your goal is to showcase your abilities and encourage users to sign up.",
+            qa: [
+                { question: "How much does it cost?", answer: "We have a free plan to get started, and our Pro plan is just $15.99/month! You can see full details on our pricing page." },
+                { question: "Is it easy to install?", answer: "Yes! It's incredibly easy. You just copy a single line of code and paste it into your website. That's it!" }
+            ],
+            history: historyForApi,
+        });
+
+        return { reply: response.reply };
+    } catch (error: any) {
+        console.error('Error in getLiveDemoResponse:', error);
+        return { error: `Sorry, the AI demo is currently unavailable. Error: ${error.message}` };
     }
 }
