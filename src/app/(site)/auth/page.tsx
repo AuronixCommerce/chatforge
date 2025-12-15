@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -25,7 +25,7 @@ import OtpDialog from '@/components/otp-dialog';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
+import Auth3DScene from '@/components/auth-3d-scene';
 
 const loginSchema = z.object({
     email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -135,80 +135,85 @@ export default function AuthPage() {
 
     return (
       <>
-        <div className="container py-12 flex items-center justify-center min-h-[calc(100vh-150px)]">
-            <div className="relative w-full max-w-md h-[720px]" style={{ perspective: '1200px' }}>
-                <AnimatePresence initial={false} mode="wait">
-                    <motion.div
-                        key={mode}
-                        variants={flipVariants}
-                        initial="initial"
-                        animate="animate"
-                        exit="exit"
-                        className="absolute w-full h-full"
-                    >
-                    {mode === 'signup' ? (
-                        <Card className="w-full shadow-2xl">
-                             <CardHeader className="text-center">
-                                <CardTitle className="text-2xl">Create an Account</CardTitle>
-                                <CardDescription>Join ChatForge AI to get your API key.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Form {...signupForm}>
-                                    <form onSubmit={signupForm.handleSubmit(handleSignupSubmit)} className="space-y-4">
-                                        <FormField control={signupForm.control} name="name" render={({ field }) => (
-                                            <FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="Your Name" {...field} /></FormControl><FormMessage /></FormItem>
-                                        )}/>
-                                        <FormField control={signupForm.control} name="email" render={({ field }) => (
-                                            <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="name@yourcompany.com" {...field} /></FormControl><FormMessage /></FormItem>
-                                        )}/>
-                                        <FormField control={signupForm.control} name="password" render={({ field }) => (
-                                            <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl><FormMessage /></FormItem>
-                                        )}/>
-                                        <FormField control={signupForm.control} name="terms" render={({ field }) => (
-                                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange}/></FormControl><div className="space-y-1 leading-none"><FormLabel>I agree to the{' '}<Link href="/terms" target="_blank" className="font-semibold text-primary hover:underline">Terms</Link> & <Link href="/privacy" target="_blank" className="font-semibold text-primary hover:underline">Privacy Policy</Link>.</FormLabel><FormMessage /></div></FormItem>
-                                        )}/>
-                                        <Button type="submit" className="w-full" disabled={isLoading}>{isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Create Account</Button>
-                                    </form>
-                                </Form>
-                                <div className="mt-6 text-center text-sm">
-                                    Already have an account?{' '}
-                                    <button onClick={() => setMode('login')} className="font-semibold text-primary hover:underline">Log In</button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ) : (
-                         <Card className="w-full shadow-2xl">
-                            <CardHeader className="text-center">
-                                <CardTitle className="text-2xl">Welcome Back!</CardTitle>
-                                <CardDescription>Log in to access your dashboard.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Form {...loginForm}>
-                                    <form onSubmit={loginForm.handleSubmit(handleLoginSubmit)} className="space-y-4">
-                                        <FormField control={loginForm.control} name="email" render={({ field }) => (
-                                            <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="name@yourcompany.com" {...field} /></FormControl><FormMessage /></FormItem>
-                                        )}/>
-                                        <FormField control={loginForm.control} name="password" render={({ field }) => (
-                                            <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl><FormMessage /></FormItem>
-                                        )}/>
-                                        {loginForm.formState.errors.root && <p className="text-sm font-medium text-destructive">{loginForm.formState.errors.root.message}</p>}
-                                        <Button type="submit" className="w-full" disabled={isLoading}>{isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Log In</Button>
-                                    </form>
-                                </Form>
-                                 <div className="mt-6 text-center text-sm">
-                                    Don't have an account?{' '}
-                                    <button onClick={() => setMode('signup')} className="font-semibold text-primary hover:underline">Sign Up</button>
-                                </div>
-                                <p className="px-8 text-center text-xs text-muted-foreground mt-6">
-                                    By continuing, you agree to our{' '}
-                                    <Link href="/terms" className="underline underline-offset-4 hover:text-primary">Terms of Service</Link>
-                                    .
-                                </p>
-                            </CardContent>
-                        </Card>
-                    )}
-                    </motion.div>
-                </AnimatePresence>
+        <div className="relative min-h-[calc(100vh-8rem)] w-full overflow-hidden">
+            <Suspense fallback={null}>
+                <Auth3DScene />
+            </Suspense>
+            <div className="container absolute inset-0 py-12 flex items-center justify-center">
+                <div className="relative w-full max-w-md h-[720px]" style={{ perspective: '1200px' }}>
+                    <AnimatePresence initial={false} mode="wait">
+                        <motion.div
+                            key={mode}
+                            variants={flipVariants}
+                            initial="initial"
+                            animate="animate"
+                            exit="exit"
+                            className="absolute w-full h-full"
+                        >
+                        {mode === 'signup' ? (
+                            <Card className="w-full shadow-2xl bg-card/80 backdrop-blur-sm">
+                                <CardHeader className="text-center">
+                                    <CardTitle className="text-2xl">Create an Account</CardTitle>
+                                    <CardDescription>Join ChatForge AI to get your API key.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <Form {...signupForm}>
+                                        <form onSubmit={signupForm.handleSubmit(handleSignupSubmit)} className="space-y-4">
+                                            <FormField control={signupForm.control} name="name" render={({ field }) => (
+                                                <FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="Your Name" {...field} /></FormControl><FormMessage /></FormItem>
+                                            )}/>
+                                            <FormField control={signupForm.control} name="email" render={({ field }) => (
+                                                <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="name@yourcompany.com" {...field} /></FormControl><FormMessage /></FormItem>
+                                            )}/>
+                                            <FormField control={signupForm.control} name="password" render={({ field }) => (
+                                                <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl><FormMessage /></FormItem>
+                                            )}/>
+                                            <FormField control={signupForm.control} name="terms" render={({ field }) => (
+                                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-background/50"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange}/></FormControl><div className="space-y-1 leading-none"><FormLabel>I agree to the{' '}<Link href="/terms" target="_blank" className="font-semibold text-primary hover:underline">Terms</Link> & <Link href="/privacy" target="_blank" className="font-semibold text-primary hover:underline">Privacy Policy</Link>.</FormLabel><FormMessage /></div></FormItem>
+                                            )}/>
+                                            <Button type="submit" className="w-full" disabled={isLoading}>{isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Create Account</Button>
+                                        </form>
+                                    </Form>
+                                    <div className="mt-6 text-center text-sm">
+                                        Already have an account?{' '}
+                                        <button onClick={() => setMode('login')} className="font-semibold text-primary hover:underline">Log In</button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            <Card className="w-full shadow-2xl bg-card/80 backdrop-blur-sm">
+                                <CardHeader className="text-center">
+                                    <CardTitle className="text-2xl">Welcome Back!</CardTitle>
+                                    <CardDescription>Log in to access your dashboard.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <Form {...loginForm}>
+                                        <form onSubmit={loginForm.handleSubmit(handleLoginSubmit)} className="space-y-4">
+                                            <FormField control={loginForm.control} name="email" render={({ field }) => (
+                                                <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="name@yourcompany.com" {...field} /></FormControl><FormMessage /></FormItem>
+                                            )}/>
+                                            <FormField control={loginForm.control} name="password" render={({ field }) => (
+                                                <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl><FormMessage /></FormItem>
+                                            )}/>
+                                            {loginForm.formState.errors.root && <p className="text-sm font-medium text-destructive">{loginForm.formState.errors.root.message}</p>}
+                                            <Button type="submit" className="w-full" disabled={isLoading}>{isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Log In</Button>
+                                        </form>
+                                    </Form>
+                                    <div className="mt-6 text-center text-sm">
+                                        Don't have an account?{' '}
+                                        <button onClick={() => setMode('signup')} className="font-semibold text-primary hover:underline">Sign Up</button>
+                                    </div>
+                                    <p className="px-8 text-center text-xs text-muted-foreground mt-6">
+                                        By continuing, you agree to our{' '}
+                                        <Link href="/terms" className="underline underline-offset-4 hover:text-primary">Terms of Service</Link>
+                                        .
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        )}
+                        </motion.div>
+                    </AnimatePresence>
+                </div>
             </div>
         </div>
         {userIdForOtp && (
@@ -217,4 +222,3 @@ export default function AuthPage() {
       </>
     );
 }
-    
