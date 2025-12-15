@@ -158,7 +158,7 @@ export default function AuthPage() {
         }
     };
     
-    const handleSignupSubmit = async (values: z.infer<typeof signupSchema>>({
+    const handleSignupSubmit = async (values: z.infer<typeof signupSchema>) => {
         setIsLoading(true);
         signupForm.clearErrors();
         try {
