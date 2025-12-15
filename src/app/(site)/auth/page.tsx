@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, Suspense, ReactNode } from 'react';
-import { useForm, FormProvider } from 'react-hook-form';
+import { useForm, FormProvider, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,7 @@ import { useRouter } from 'next/navigation';
 import OtpDialog from '@/components/otp-dialog';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Checkbox } from '@/components/ui/checkbox';
-import { motion, AnimatePresence, useFormContext } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Auth3DScene from '@/components/auth-3d-scene';
 import TermsContent from '@/components/legal/terms-content';
 import PrivacyContent from '@/components/legal/privacy-content';
@@ -298,7 +298,12 @@ export default function AuthPage() {
             </motion.div>
             
             <div className="container relative z-10 py-12 flex items-center justify-center min-h-[calc(100vh-8rem)]">
-                <div className="relative w-full max-w-md h-[720px]" style={{ perspective: '1200px' }}>
+                <motion.div 
+                    className="relative w-full max-w-md h-[720px]" 
+                    style={{ perspective: '1200px' }}
+                    animate={{ opacity: activeField ? 0 : 1 }}
+                    transition={{ duration: 0.3 }}
+                >
                     <AnimatePresence initial={false} mode="wait">
                         <motion.div
                             key={mode}
@@ -307,12 +312,11 @@ export default function AuthPage() {
                             animate="animate"
                             exit="exit"
                             className="absolute w-full h-full"
-                             style={{ opacity: activeField ? 0 : 1 }}
                         >
                             {renderContent()}
                         </motion.div>
                     </AnimatePresence>
-                </div>
+                </motion.div>
             </div>
              <AnimatePresence>
                 {activeField && (
@@ -359,5 +363,7 @@ export default function AuthPage() {
       </>
     );
 }
+
+    
 
     
