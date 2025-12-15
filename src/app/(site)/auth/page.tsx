@@ -150,12 +150,15 @@ export default function AuthPage() {
     
         return (
              <motion.div
-                className="fixed inset-0 z-20 flex items-center justify-center bg-black/30"
+                className="fixed inset-0 z-20 flex items-center justify-center bg-black/50"
                 onClick={() => setActiveField(null)}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
             >
             <Form {...activeForm}>
                 <form onSubmit={activeForm.handleSubmit(mode === 'signup' ? handleSignupSubmit : handleLoginSubmit)} onClick={(e) => e.stopPropagation()}>
-                {field === 'name' && (
+                {field === 'name' && mode === 'signup' && (
                     <motion.div {...commonProps('name')}>
                          <FormField control={signupForm.control} name="name" render={({ field }) => (
                             <FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="Your Name" {...field} autoFocus /></FormControl><FormMessage /></FormItem>
@@ -176,7 +179,7 @@ export default function AuthPage() {
                         )}/>
                     </motion.div>
                 )}
-                 {field === 'terms' && (
+                 {field === 'terms' && mode === 'signup' && (
                      <motion.div {...commonProps('terms')}>
                          <FormField control={signupForm.control} name="terms" render={({ field }) => (
                             <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-background/80 backdrop-blur-sm"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange}/></FormControl>
@@ -342,3 +345,5 @@ export default function AuthPage() {
       </>
     );
 }
+
+    
