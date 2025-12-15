@@ -9,11 +9,14 @@ import HowItWorksAnimation from '@/components/how-it-works-animation';
 import AnimatedFeatures from '@/components/animated-features';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import HomePageGame from '@/components/home-page-game';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
+  const router = useRouter();
+
   return (
     <HomePageGame>
-      {({ isGameActive, startGame }) => (
+      {({ isGameActive, startGame, isGameOver }) => (
         <div className="flex flex-col items-center justify-center bg-background">
           <section className="relative w-full overflow-hidden bg-gradient-to-b from-background via-background to-secondary/20 py-20 md:py-32">
             <div className="absolute inset-0 z-0">
@@ -40,8 +43,18 @@ export default function Home() {
                     </p>
                   </div>
                   <div className="flex flex-col gap-4 min-[400px]:flex-row">
-                    <Button onClick={startGame} size="lg" className="group">
-                      Get Started Free <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                    <Button 
+                      onClick={() => {
+                        if (isGameActive || !isGameOver) {
+                          startGame();
+                        } else {
+                          router.push('/auth');
+                        }
+                      }} 
+                      size="lg" 
+                      className="group"
+                    >
+                      {isGameOver ? 'Sign Up Now' : 'Get Started Free'} <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                     </Button>
                     <Button asChild size="lg" variant="outline">
                       <Link href="#features">
@@ -82,18 +95,18 @@ export default function Home() {
               <div className="mx-auto mt-10 grid max-w-sm grid-cols-1 gap-8 lg:max-w-5xl lg:grid-cols-3">
                 <Card className="flex flex-col justify-between rounded-lg border shadow-lg">
                     <CardHeader className="text-center">
-                        <CardTitle className="text-2xl">Free</CardTitle>
-                        <p className="text-muted-foreground">Perfect for getting started.</p>
+                        <CardTitle contentEditable={isGameActive} suppressContentEditableWarning={true} className="text-2xl outline-none">Free</CardTitle>
+                        <p contentEditable={isGameActive} suppressContentEditableWarning={true} className="text-muted-foreground outline-none">Perfect for getting started.</p>
                     </CardHeader>
                     <CardContent className="text-center space-y-4">
                         <div className="space-y-1">
-                            <span className="text-4xl font-bold">$0</span>
+                            <span contentEditable={isGameActive} suppressContentEditableWarning={true} className="text-4xl font-bold outline-none">$0</span>
                             <span className="text-muted-foreground">/month</span>
                         </div>
                         <ul className="grid gap-2 text-muted-foreground text-left">
-                            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" />1 Chatbot</li>
-                            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" />1,000 Messages/Month</li>
-                            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" />Community Support</li>
+                            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" /><span contentEditable={isGameActive} suppressContentEditableWarning={true} className="outline-none">1 Chatbot</span></li>
+                            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" /><span contentEditable={isGameActive} suppressContentEditableWarning={true} className="outline-none">1,000 Messages/Month</span></li>
+                            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" /><span contentEditable={isGameActive} suppressContentEditableWarning={true} className="outline-none">Community Support</span></li>
                         </ul>
                     </CardContent>
                     <div className="p-6">
@@ -104,19 +117,19 @@ export default function Home() {
                 </Card>
                 <Card className="flex flex-col justify-between rounded-lg border-2 border-primary shadow-lg shadow-primary/20">
                     <CardHeader className="text-center">
-                        <CardTitle className="text-2xl">Pro Plan</CardTitle>
-                        <p className="text-muted-foreground">For professionals and businesses.</p>
+                        <CardTitle contentEditable={isGameActive} suppressContentEditableWarning={true} className="text-2xl outline-none">Pro Plan</CardTitle>
+                        <p contentEditable={isGameActive} suppressContentEditableWarning={true} className="text-muted-foreground outline-none">For professionals and businesses.</p>
                     </CardHeader>
                     <CardContent className="text-center space-y-4">
                         <div className="space-y-1">
-                            <span className="text-4xl font-bold">$15.99</span>
+                            <span contentEditable={isGameActive} suppressContentEditableWarning={true} className="text-4xl font-bold outline-none">$15.99</span>
                             <span className="text-muted-foreground">/month</span>
                         </div>
                         <ul className="grid gap-2 text-muted-foreground text-left">
-                            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" />10 Chatbots</li>
-                            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" />50,000 Messages/Month</li>
-                            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" />Email & Chat Support</li>
-                            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" />Analytics Dashboard</li>
+                            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" /><span contentEditable={isGameActive} suppressContentEditableWarning={true} className="outline-none">10 Chatbots</span></li>
+                            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" /><span contentEditable={isGameActive} suppressContentEditableWarning={true} className="outline-none">50,000 Messages/Month</span></li>
+                            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" /><span contentEditable={isGameActive} suppressContentEditableWarning={true} className="outline-none">Email & Chat Support</span></li>
+                            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" /><span contentEditable={isGameActive} suppressContentEditableWarning={true} className="outline-none">Analytics Dashboard</span></li>
                         </ul>
                     </CardContent>
                      <div className="p-6">
@@ -127,18 +140,18 @@ export default function Home() {
                 </Card>
                  <Card className="flex flex-col justify-between rounded-lg border shadow-lg">
                     <CardHeader className="text-center">
-                        <CardTitle className="text-2xl">Enterprise</CardTitle>
-                        <p className="text-muted-foreground">For large-scale applications.</p>
+                        <CardTitle contentEditable={isGameActive} suppressContentEditableWarning={true} className="text-2xl outline-none">Enterprise</CardTitle>
+                        <p contentEditable={isGameActive} suppressContentEditableWarning={true} className="text-muted-foreground outline-none">For large-scale applications.</p>
                     </CardHeader>
                     <CardContent className="text-center space-y-4">
                         <div className="space-y-1">
-                            <span className="text-4xl font-bold">Custom</span>
+                            <span contentEditable={isGameActive} suppressContentEditableWarning={true} className="text-4xl font-bold outline-none">Custom</span>
                         </div>
                         <ul className="grid gap-2 text-muted-foreground text-left">
-                            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" />Unlimited Chatbots</li>
-                            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" />Custom Message Quotas</li>
-                            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" />24/7 Priority Support</li>
-                            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" />Custom Integrations</li>
+                            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" /><span contentEditable={isGameActive} suppressContentEditableWarning={true} className="outline-none">Unlimited Chatbots</span></li>
+                            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" /><span contentEditable={isGameActive} suppressContentEditableWarning={true} className="outline-none">Custom Message Quotas</span></li>
+                            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" /><span contentEditable={isGameActive} suppressContentEditableWarning={true} className="outline-none">24/7 Priority Support</span></li>
+                            <li className="flex items-center gap-2"><Check className="w-4 h-4 text-primary" /><span contentEditable={isGameActive} suppressContentEditableWarning={true} className="outline-none">Custom Integrations</span></li>
                         </ul>
                     </CardContent>
                      <div className="p-6">

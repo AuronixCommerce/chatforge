@@ -4,9 +4,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from './ui/button';
+import { useRouter } from 'next/navigation';
 
 interface HomePageGameProps {
-  children: (props: { isGameActive: boolean; startGame: () => void }) => React.ReactNode;
+  children: (props: { isGameActive: boolean; startGame: () => void; isGameOver: boolean }) => React.ReactNode;
 }
 
 const GAME_DURATION = 20;
@@ -14,10 +15,12 @@ const GAME_DURATION = 20;
 export default function HomePageGame({ children }: HomePageGameProps) {
   const [isGameActive, setIsGameActive] = useState(false);
   const [timeLeft, setTimeLeft] = useState(GAME_DURATION);
+  const [isGameOver, setIsGameOver] = useState(false);
+  const router = useRouter();
 
   const stopGame = useCallback(() => {
     setIsGameActive(false);
-    setTimeLeft(GAME_DURATION);
+    setIsGameOver(true);
     document.body.style.cursor = 'default';
   }, []);
 
@@ -29,12 +32,15 @@ export default function HomePageGame({ children }: HomePageGameProps) {
       }, 1000);
     } else if (isGameActive && timeLeft === 0) {
       stopGame();
+      router.push('/auth');
     }
     return () => clearTimeout(timer);
-  }, [isGameActive, timeLeft, stopGame]);
+  }, [isGameActive, timeLeft, stopGame, router]);
 
   const startGame = () => {
+    if (isGameActive || isGameOver) return;
     setIsGameActive(true);
+    setTimeLeft(GAME_DURATION);
     document.body.style.cursor = 'text';
   };
 
@@ -42,7 +48,7 @@ export default function HomePageGame({ children }: HomePageGameProps) {
 
   return (
     <>
-      {children({ isGameActive, startGame })}
+      {children({ isGameActive, startGame, isGameOver })}
       <AnimatePresence>
         {isGameActive && (
           <motion.div
