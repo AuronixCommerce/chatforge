@@ -26,6 +26,7 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { motion, AnimatePresence } from 'framer-motion';
 import Auth3DScene from '@/components/auth-3d-scene';
+import { LegalDialog } from '@/components/legal-dialog';
 
 const loginSchema = z.object({
     email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -190,7 +191,22 @@ export default function AuthPage() {
                                             </motion.div>
                                             <motion.div variants={fieldVariants} animate={activeField === 'terms' ? 'active' : 'inactive'}>
                                             <FormField control={signupForm.control} name="terms" render={({ field }) => (
-                                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-background/50" onFocus={() => setActiveField('terms')}><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange}/></FormControl><div className="space-y-1 leading-none"><FormLabel>I agree to the{' '}<Link href="/terms" target="_blank" className="font-semibold text-primary hover:underline">Terms</Link> & <Link href="/privacy" target="_blank" className="font-semibold text-primary hover:underline">Privacy Policy</Link>.</FormLabel><FormMessage /></div></FormItem>
+                                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-background/50" onFocus={() => setActiveField('terms')}><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange}/></FormControl>
+                                                <div className="space-y-1 leading-none">
+                                                    <FormLabel>
+                                                        I agree to the{' '}
+                                                        <LegalDialog doc="terms">
+                                                            <span className="font-semibold text-primary hover:underline cursor-pointer">Terms</span>
+                                                        </LegalDialog>
+                                                        {' '} & {' '}
+                                                        <LegalDialog doc="privacy">
+                                                            <span className="font-semibold text-primary hover:underline cursor-pointer">Privacy Policy</span>
+                                                        </LegalDialog>
+                                                        .
+                                                    </FormLabel>
+                                                    <FormMessage />
+                                                </div>
+                                                </FormItem>
                                             )}/>
                                             </motion.div>
                                             <motion.div variants={fieldVariants} animate={activeField === 'submit' ? 'active' : 'inactive'}>
@@ -235,7 +251,9 @@ export default function AuthPage() {
                                     </div>
                                     <p className="px-8 text-center text-xs text-muted-foreground mt-6">
                                         By continuing, you agree to our{' '}
-                                        <Link href="/terms" className="underline underline-offset-4 hover:text-primary">Terms of Service</Link>
+                                        <LegalDialog doc="terms">
+                                            <span className="underline underline-offset-4 hover:text-primary cursor-pointer">Terms of Service</span>
+                                        </LegalDialog>
                                         .
                                     </p>
                                 </CardContent>
