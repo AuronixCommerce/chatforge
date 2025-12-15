@@ -1,17 +1,23 @@
 
 'use client'
 import { motion } from 'framer-motion'
-import { cn } from '@/lib/utils'
+import { useState, useEffect } from 'react'
 
 const NUM_SHAPES = 20;
 
-const Shape = () => {
-    const duration = 20 + Math.random() * 20;
-    const delay = Math.random() * -duration;
-    const size = Math.floor(20 + Math.random() * 80);
-    const initialY = Math.random() * 100;
-    const initialX = Math.random() * 100;
-    const rotate = Math.random() * 360;
+type ShapeData = {
+    id: number;
+    duration: number;
+    delay: number;
+    size: number;
+    initialY: number;
+    initialX: number;
+    rotate: number;
+    borderRadius: string;
+}
+
+const Shape = ({ data }: { data: ShapeData }) => {
+    const { size, initialY, initialX, rotate, borderRadius, duration, delay } = data;
 
     return (
         <motion.div
@@ -22,7 +28,7 @@ const Shape = () => {
                 top: `${initialY}vh`,
                 left: `${initialX}vw`,
                 rotate: `${rotate}deg`,
-                borderRadius: Math.random() > 0.5 ? '50%' : '10%',
+                borderRadius: borderRadius,
             }}
             animate={{
                 y: ['0vh', '-120vh', '0vh'],
@@ -39,8 +45,29 @@ const Shape = () => {
     )
 }
 
-
 export default function Auth3DScene() {
+    const [shapes, setShapes] = useState<ShapeData[]>([]);
+
+    useEffect(() => {
+        const generateShapes = () => {
+            return Array.from({ length: NUM_SHAPES }).map((_, i) => {
+                const duration = 20 + Math.random() * 20;
+                return {
+                    id: i,
+                    duration,
+                    delay: Math.random() * -duration,
+                    size: Math.floor(20 + Math.random() * 80),
+                    initialY: Math.random() * 100,
+                    initialX: Math.random() * 100,
+                    rotate: Math.random() * 360,
+                    borderRadius: Math.random() > 0.5 ? '50%' : '10%',
+                }
+            });
+        };
+        setShapes(generateShapes());
+    }, []);
+
+
     return (
         <div className="absolute inset-0 z-0 overflow-hidden bg-gradient-to-br from-blue-900/50 via-purple-900/50 to-indigo-900/50">
              <motion.div
@@ -54,8 +81,8 @@ export default function Auth3DScene() {
                     ease: 'easeInOut',
                 }}
             />
-            {Array.from({ length: NUM_SHAPES }).map((_, i) => (
-                <Shape key={i} />
+            {shapes.map((shapeData) => (
+                <Shape key={shapeData.id} data={shapeData} />
             ))}
         </div>
     )

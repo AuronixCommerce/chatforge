@@ -18,7 +18,6 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import Link from 'next/link';
 import { customLogin, customSignUp } from '../../actions';
 import { useRouter } from 'next/navigation';
 import OtpDialog from '@/components/otp-dialog';
@@ -146,37 +145,41 @@ export default function AuthPage() {
             exit: { opacity: 0 },
             className: "w-full max-w-sm"
         });
+
+        const activeForm = mode === 'signup' ? signupForm : loginForm;
     
         return (
-            <motion.div
+             <motion.div
                 className="fixed inset-0 z-20 flex items-center justify-center"
                 onClick={() => setActiveField(null)}
             >
+            <Form {...activeForm}>
+                <form onSubmit={activeForm.handleSubmit(mode === 'signup' ? handleSignupSubmit : handleLoginSubmit)}>
                 {field === 'name' && (
                     <motion.div {...commonProps('name')}>
                          <FormField control={signupForm.control} name="name" render={({ field }) => (
-                            <FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="Your Name" {...field} autoFocus /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="Your Name" {...field} autoFocus onClick={(e) => e.stopPropagation()} /></FormControl><FormMessage /></FormItem>
                         )}/>
                     </motion.div>
                 )}
                  {field === 'email' && (
                     <motion.div {...commonProps('email')}>
                          <FormField control={mode === 'signup' ? signupForm.control : loginForm.control} name="email" render={({ field }) => (
-                            <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="name@yourcompany.com" {...field} autoFocus /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="name@yourcompany.com" {...field} autoFocus onClick={(e) => e.stopPropagation()}/></FormControl><FormMessage /></FormItem>
                         )}/>
                     </motion.div>
                 )}
                 {field === 'password' && (
                      <motion.div {...commonProps('password')}>
                          <FormField control={mode === 'signup' ? signupForm.control : loginForm.control} name="password" render={({ field }) => (
-                            <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} autoFocus /></FormControl><FormMessage /></FormItem>
+                            <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} autoFocus onClick={(e) => e.stopPropagation()}/></FormControl><FormMessage /></FormItem>
                         )}/>
                     </motion.div>
                 )}
                  {field === 'terms' && (
                      <motion.div {...commonProps('terms')}>
                          <FormField control={signupForm.control} name="terms" render={({ field }) => (
-                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-background/50"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange}/></FormControl>
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-background/80 backdrop-blur-sm" onClick={(e) => e.stopPropagation()}><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange}/></FormControl>
                             <div className="space-y-1 leading-none">
                                 <FormLabel>
                                     I agree to the{' '}
@@ -196,10 +199,12 @@ export default function AuthPage() {
                     </motion.div>
                 )}
                  {field === 'submit' && (
-                     <motion.div {...commonProps('submit')}>
+                     <motion.div {...commonProps('submit')} onClick={(e) => e.stopPropagation()}>
                         <Button type="submit" className="w-full h-12 text-lg" disabled={isLoading}>{isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{mode === 'signup' ? 'Create Account' : 'Log In'}</Button>
                     </motion.div>
                 )}
+                </form>
+            </Form>
             </motion.div>
         )
     }
