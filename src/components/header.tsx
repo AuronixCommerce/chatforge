@@ -115,7 +115,7 @@ export default function Header() {
             </DropdownMenu>
           ) : (
             <Button asChild>
-              <Link href="/signup">Get Started</Link>
+              <Link href="/auth">Get Started</Link>
             </Button>
           )}
         </div>
@@ -123,3 +123,5 @@ export default function Header() {
     </header>
   );
 }
+
+    

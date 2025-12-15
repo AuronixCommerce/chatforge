@@ -28,7 +28,7 @@ export default function Home() {
               </div>
               <div className="flex flex-col gap-4 min-[400px]:flex-row">
                 <Button asChild size="lg" className="group">
-                  <Link href="/signup">
+                  <Link href="/auth">
                     Get Started Free <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                   </Link>
                 </Button>
@@ -138,7 +138,7 @@ export default function Home() {
             </p>
             <div className="mt-8">
                 <Button asChild size="lg" className="group">
-                  <Link href="/signup">
+                  <Link href="/auth">
                     Sign Up Now <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
                   </Link>
                 </Button>

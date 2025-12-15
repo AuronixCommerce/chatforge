@@ -136,6 +136,7 @@ async function createDefaultChatbot(db: any, batch: any, userId: string) {
 }
 
 const signUpSchema = z.object({
+    name: z.string().min(2, 'Name must be at least 2 characters.'),
     email: z.string().email(),
     password: z.string().min(8, 'Password must be at least 8 characters long.'),
 });
@@ -147,7 +148,7 @@ export async function customSignUp(values: z.infer<typeof signUpSchema>) {
         return { error: validation.error.flatten().fieldErrors };
     }
 
-    const { email, password } = validation.data;
+    const { name, email, password } = validation.data;
     
     try {
         const db = getDb();
@@ -168,7 +169,7 @@ export async function customSignUp(values: z.infer<typeof signUpSchema>) {
         
         const newUser = {
             email,
-            name: email.split('@')[0],
+            name,
             passwordHash: `${salt}:${hash}`,
             isVerified: false,
             isBanned: false,
@@ -983,3 +984,5 @@ export async function getLiveDemoResponse(message: string, history: HistoryItem[
         return { error: `Sorry, the AI demo is currently unavailable. Error: ${error.message}` };
     }
 }
+
+    
