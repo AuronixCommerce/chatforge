@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, Suspense, ReactNode } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -17,13 +17,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, ArrowLeft } from 'lucide-react';
+import { Loader2, ArrowLeft, X } from 'lucide-react';
 import { customLogin, customSignUp } from '../../actions';
 import { useRouter } from 'next/navigation';
 import OtpDialog from '@/components/otp-dialog';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Checkbox } from '@/components/ui/checkbox';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useFormContext } from 'framer-motion';
 import Auth3DScene from '@/components/auth-3d-scene';
 import TermsContent from '@/components/legal/terms-content';
 import PrivacyContent from '@/components/legal/privacy-content';
@@ -44,6 +44,7 @@ const signupSchema = z.object({
 });
 
 type AuthMode = 'login' | 'signup' | 'terms' | 'privacy';
+type ActiveField = 'name' | 'email' | 'password' | null;
 
 const LegalPage = ({ title, onBack, children }: { title: string, onBack: () => void, children: ReactNode }) => (
     <Card className="w-full h-full shadow-2xl bg-card/80 backdrop-blur-sm flex flex-col">
@@ -64,11 +65,37 @@ const LegalPage = ({ title, onBack, children }: { title: string, onBack: () => v
     </Card>
 );
 
+const FocusedView = ({ field, form, children }: { field: ActiveField, form: any, children: ReactNode }) => {
+    const methods = useFormContext();
+    return (
+        <motion.div
+            className="absolute inset-0 z-20 flex items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+        >
+            <motion.div layoutId={`${field}-wrapper`} className="w-full max-w-sm">
+                <FormProvider {...form}>
+                     <form>
+                        <Card>
+                            <CardContent className="p-6">
+                                {children}
+                            </CardContent>
+                        </Card>
+                    </form>
+                </FormProvider>
+            </motion.div>
+        </motion.div>
+    );
+};
+
+
 export default function AuthPage() {
     const [mode, setMode] = useState<AuthMode>('signup');
     const [isLoading, setIsLoading] = useState(false);
     const [showOtpDialog, setShowOtpDialog] = useState(false);
     const [userIdForOtp, setUserIdForOtp] = useState<string | null>(null);
+    const [activeField, setActiveField] = useState<ActiveField>(null);
     const { toast } = useToast();
     const router = useRouter();
     const { login: setAuthToken } = useAuth();
@@ -164,17 +191,23 @@ export default function AuthPage() {
                             <CardDescription>Join ChatForge AI to get your API key.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <Form {...signupForm}>
+                            <FormProvider {...signupForm}>
                                 <form onSubmit={signupForm.handleSubmit(handleSignupSubmit)} className="space-y-4">
-                                    <FormField control={signupForm.control} name="name" render={({ field }) => (
-                                        <FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="Your Name" {...field} /></FormControl><FormMessage /></FormItem>
-                                    )}/>
-                                    <FormField control={signupForm.control} name="email" render={({ field }) => (
-                                        <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="name@yourcompany.com" {...field} /></FormControl><FormMessage /></FormItem>
-                                    )}/>
-                                    <FormField control={signupForm.control} name="password" render={({ field }) => (
-                                        <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl><FormMessage /></FormItem>
-                                    )}/>
+                                     <motion.div layoutId="name-wrapper" onClick={() => setActiveField('name')}>
+                                        <FormField control={signupForm.control} name="name" render={({ field }) => (
+                                            <FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="Your Name" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )}/>
+                                    </motion.div>
+                                    <motion.div layoutId="email-wrapper" onClick={() => setActiveField('email')}>
+                                        <FormField control={signupForm.control} name="email" render={({ field }) => (
+                                            <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="name@yourcompany.com" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )}/>
+                                    </motion.div>
+                                    <motion.div layoutId="password-wrapper" onClick={() => setActiveField('password')}>
+                                        <FormField control={signupForm.control} name="password" render={({ field }) => (
+                                            <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )}/>
+                                    </motion.div>
                                     <FormField control={signupForm.control} name="terms" render={({ field }) => (
                                         <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-background/50"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange}/></FormControl>
                                         <div className="space-y-1 leading-none">
@@ -191,7 +224,7 @@ export default function AuthPage() {
                                     )}/>
                                     <Button type="submit" className="w-full" disabled={isLoading}>{isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Create Account</Button>
                                 </form>
-                            </Form>
+                            </FormProvider>
                             <div className="mt-6 text-center text-sm">
                                 Already have an account?{' '}
                                 <button onClick={() => setMode('login')} className="font-semibold text-primary hover:underline">Log In</button>
@@ -207,18 +240,22 @@ export default function AuthPage() {
                             <CardDescription>Log in to access your dashboard.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <Form {...loginForm}>
+                            <FormProvider {...loginForm}>
                                 <form onSubmit={loginForm.handleSubmit(handleLoginSubmit)} className="space-y-4">
-                                    <FormField control={loginForm.control} name="email" render={({ field }) => (
-                                        <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="name@yourcompany.com" {...field} /></FormControl><FormMessage /></FormItem>
-                                    )}/>
+                                     <motion.div layoutId="email-wrapper" onClick={() => setActiveField('email')}>
+                                        <FormField control={loginForm.control} name="email" render={({ field }) => (
+                                            <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="name@yourcompany.com" {...field} /></FormControl><FormMessage /></FormItem>
+                                        )}/>
+                                    </motion.div>
+                                    <motion.div layoutId="password-wrapper" onClick={() => setActiveField('password')}>
                                     <FormField control={loginForm.control} name="password" render={({ field }) => (
                                         <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl><FormMessage /></FormItem>
                                     )}/>
+                                    </motion.div>
                                     {loginForm.formState.errors.root && <p className="text-sm font-medium text-destructive">{loginForm.formState.errors.root.message}</p>}
                                     <Button type="submit" className="w-full" disabled={isLoading}>{isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Log In</Button>
                                 </form>
-                            </Form>
+                            </FormProvider>
                             <div className="mt-6 text-center text-sm">
                                 Don't have an account?{' '}
                                 <button onClick={() => setMode('signup')} className="font-semibold text-primary hover:underline">Sign Up</button>
@@ -250,11 +287,15 @@ export default function AuthPage() {
     return (
       <>
         <div className="relative min-h-[calc(100vh-8rem)] w-full overflow-hidden bg-background">
-             <div className="absolute inset-0 z-0">
+             <motion.div 
+                className="absolute inset-0 z-0"
+                animate={{ filter: activeField ? 'blur(8px)' : 'blur(0px)' }}
+                transition={{ duration: 0.3 }}
+              >
                 <Suspense fallback={<div className="bg-background" />}>
                     <Auth3DScene />
                 </Suspense>
-            </div>
+            </motion.div>
             
             <div className="container relative z-10 py-12 flex items-center justify-center min-h-[calc(100vh-8rem)]">
                 <div className="relative w-full max-w-md h-[720px]" style={{ perspective: '1200px' }}>
@@ -266,12 +307,51 @@ export default function AuthPage() {
                             animate="animate"
                             exit="exit"
                             className="absolute w-full h-full"
+                             style={{ opacity: activeField ? 0 : 1 }}
                         >
                             {renderContent()}
                         </motion.div>
                     </AnimatePresence>
                 </div>
             </div>
+             <AnimatePresence>
+                {activeField && (
+                    <>
+                        <motion.div
+                            className="absolute inset-0 z-10 bg-black/30"
+                            onClick={() => setActiveField(null)}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                        />
+                        <FocusedView field={activeField} form={mode === 'signup' ? signupForm : loginForm}>
+                           <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute top-2 right-2 z-30 rounded-full h-8 w-8"
+                                onClick={() => setActiveField(null)}
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                            {activeField === 'name' && (
+                                <FormField control={signupForm.control} name="name" render={({ field }) => (
+                                    <FormItem><FormLabel>Name</FormLabel><FormControl><Input autoFocus placeholder="Your Name" {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                            )}
+                            {activeField === 'email' && (
+                                <FormField control={mode === 'signup' ? signupForm.control : loginForm.control} name="email" render={({ field }) => (
+                                    <FormItem><FormLabel>Email</FormLabel><FormControl><Input autoFocus type="email" placeholder="name@yourcompany.com" {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                            )}
+                             {activeField === 'password' && (
+                                <FormField control={mode === 'signup' ? signupForm.control : loginForm.control} name="password" render={({ field }) => (
+                                    <FormItem><FormLabel>Password</FormLabel><FormControl><Input autoFocus type="password" placeholder="••••••••" {...field} /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                            )}
+                        </FocusedView>
+                    </>
+                )}
+            </AnimatePresence>
         </div>
         {userIdForOtp && (
             <OtpDialog isOpen={showOtpDialog} onClose={() => setShowOtpDialog(false)} onSuccess={onOtpSuccess} userId={userIdForOtp} />
