@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, Suspense, ReactNode } from 'react';
-import { useForm, FormProvider, useFormContext } from 'react-hook-form';
+import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -158,7 +158,7 @@ export default function AuthPage() {
         }
     };
     
-    const handleSignupSubmit = async (values: z.infer<typeof signupSchema>) => {
+    const handleSignupSubmit = async (values: z.infer<typeof signupSchema>>({
         setIsLoading(true);
         signupForm.clearErrors();
         try {
@@ -276,13 +276,13 @@ export default function AuthPage() {
                 );
             case 'terms':
                 return (
-                    <LegalPage title="Terms & Conditions" onBack={() => setMode('signup')}>
+                    <LegalPage title="Terms & Conditions" onBack={() => setMode(signupForm.formState.isSubmitted ? 'login' : 'signup')}>
                         <TermsContent />
                     </LegalPage>
                 );
             case 'privacy':
                 return (
-                    <LegalPage title="Privacy Policy" onBack={() => setMode('signup')}>
+                    <LegalPage title="Privacy Policy" onBack={() => setMode(signupForm.formState.isSubmitted ? 'login' : 'signup')}>
                         <PrivacyContent />
                     </LegalPage>
                 );
