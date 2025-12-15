@@ -65,8 +65,7 @@ const LegalPage = ({ title, onBack, children }: { title: string, onBack: () => v
     </Card>
 );
 
-const FocusedView = ({ field, form, children }: { field: ActiveField, form: any, children: ReactNode }) => {
-    const methods = useFormContext();
+const FocusedView = ({ field, form, children, onClose }: { field: ActiveField, form: any, children: ReactNode, onClose: () => void }) => {
     return (
         <motion.div
             className="absolute inset-0 z-20 flex items-center justify-center"
@@ -78,7 +77,15 @@ const FocusedView = ({ field, form, children }: { field: ActiveField, form: any,
                 <FormProvider {...form}>
                      <form>
                         <Card>
-                            <CardContent className="p-6">
+                            <CardContent className="p-6 relative">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="absolute top-2 right-2 z-30 rounded-full h-8 w-8"
+                                    onClick={onClose}
+                                >
+                                    <X className="h-4 w-4" />
+                                </Button>
                                 {children}
                             </CardContent>
                         </Card>
@@ -205,7 +212,7 @@ export default function AuthPage() {
                                     </motion.div>
                                     <motion.div layoutId="password-wrapper" onClick={() => setActiveField('password')}>
                                         <FormField control={signupForm.control} name="password" render={({ field }) => (
-                                            <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl><FormMessage /></FormItem>
+                                            <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl><FormMessage /></FormMessage>
                                         )}/>
                                     </motion.div>
                                     <FormField control={signupForm.control} name="terms" render={({ field }) => (
@@ -328,15 +335,11 @@ export default function AuthPage() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                         />
-                        <FocusedView field={activeField} form={mode === 'signup' ? signupForm : loginForm}>
-                           <Button
-                                variant="ghost"
-                                size="icon"
-                                className="absolute top-2 right-2 z-30 rounded-full h-8 w-8"
-                                onClick={() => setActiveField(null)}
-                            >
-                                <X className="h-4 w-4" />
-                            </Button>
+                        <FocusedView 
+                            field={activeField} 
+                            form={mode === 'signup' ? signupForm : loginForm} 
+                            onClose={() => setActiveField(null)}
+                        >
                             {activeField === 'name' && (
                                 <FormField control={signupForm.control} name="name" render={({ field }) => (
                                     <FormItem><FormLabel>Name</FormLabel><FormControl><Input autoFocus placeholder="Your Name" {...field} /></FormControl><FormMessage /></FormItem>
@@ -363,7 +366,5 @@ export default function AuthPage() {
       </>
     );
 }
-
-    
 
     
