@@ -42,12 +42,14 @@ const signupSchema = z.object({
 });
 
 type AuthMode = 'login' | 'signup';
+type ActiveField = 'name' | 'email' | 'password' | 'terms' | 'submit' | null;
 
 export default function AuthPage() {
     const [mode, setMode] = useState<AuthMode>('signup');
     const [isLoading, setIsLoading] = useState(false);
     const [showOtpDialog, setShowOtpDialog] = useState(false);
     const [userIdForOtp, setUserIdForOtp] = useState<string | null>(null);
+    const [activeField, setActiveField] = useState<ActiveField>(null);
     const { toast } = useToast();
     const router = useRouter();
     const { login: setAuthToken } = useAuth();
@@ -132,17 +134,27 @@ export default function AuthPage() {
         animate: { rotateY: 0, opacity: 1, scale: 1, transition: { duration: 0.4, ease: 'easeOut' } },
         exit: { rotateY: 90, opacity: 0, scale: 0.95, transition: { duration: 0.4, ease: 'easeIn' } },
     };
+    
+    const fieldVariants = {
+        initial: { scale: 1 },
+        active: { scale: 1.05, transition: { duration: 0.2 } },
+        inactive: { scale: 1, transition: { duration: 0.2 } },
+    };
 
     return (
       <>
         <div className="relative min-h-[calc(100vh-8rem)] w-full overflow-hidden bg-background">
-            <div className="absolute inset-0 z-0">
+            <motion.div 
+                className="absolute inset-0 z-0"
+                animate={{ filter: activeField ? 'blur(8px)' : 'blur(0px)'}}
+                transition={{ duration: 0.3 }}
+            >
                 <Suspense fallback={<div className="bg-background" />}>
                     <Auth3DScene />
                 </Suspense>
-            </div>
-            <div className="container relative z-10 py-12 flex items-center justify-center min-h-[calc(100vh-8rem)]">
-                <div className="relative w-full max-w-md h-[720px]" style={{ perspective: '1200px' }}>
+            </motion.div>
+            <div className="container relative z-10 py-12 flex items-center justify-center min-h-[calc(100vh-8rem)]" onClick={() => setActiveField(null)}>
+                <div className="relative w-full max-w-md h-[720px]" style={{ perspective: '1200px' }} onClick={(e) => e.stopPropagation()}>
                     <AnimatePresence initial={false} mode="wait">
                         <motion.div
                             key={mode}
@@ -161,24 +173,34 @@ export default function AuthPage() {
                                 <CardContent>
                                     <Form {...signupForm}>
                                         <form onSubmit={signupForm.handleSubmit(handleSignupSubmit)} className="space-y-4">
-                                            <FormField control={signupForm.control} name="name" render={({ field }) => (
-                                                <FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="Your Name" {...field} /></FormControl><FormMessage /></FormItem>
-                                            )}/>
+                                            <motion.div variants={fieldVariants} animate={activeField === 'name' ? 'active' : 'inactive'}>
+                                                <FormField control={signupForm.control} name="name" render={({ field }) => (
+                                                    <FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="Your Name" {...field} onFocus={() => setActiveField('name')} /></FormControl><FormMessage /></FormItem>
+                                                )}/>
+                                            </motion.div>
+                                            <motion.div variants={fieldVariants} animate={activeField === 'email' ? 'active' : 'inactive'}>
                                             <FormField control={signupForm.control} name="email" render={({ field }) => (
-                                                <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="name@yourcompany.com" {...field} /></FormControl><FormMessage /></FormItem>
+                                                <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="name@yourcompany.com" {...field} onFocus={() => setActiveField('email')} /></FormControl><FormMessage /></FormItem>
                                             )}/>
+                                            </motion.div>
+                                            <motion.div variants={fieldVariants} animate={activeField === 'password' ? 'active' : 'inactive'}>
                                             <FormField control={signupForm.control} name="password" render={({ field }) => (
-                                                <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl><FormMessage /></FormItem>
+                                                <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} onFocus={() => setActiveField('password')} /></FormControl><FormMessage /></FormItem>
                                             )}/>
+                                            </motion.div>
+                                            <motion.div variants={fieldVariants} animate={activeField === 'terms' ? 'active' : 'inactive'}>
                                             <FormField control={signupForm.control} name="terms" render={({ field }) => (
-                                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-background/50"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange}/></FormControl><div className="space-y-1 leading-none"><FormLabel>I agree to the{' '}<Link href="/terms" target="_blank" className="font-semibold text-primary hover:underline">Terms</Link> & <Link href="/privacy" target="_blank" className="font-semibold text-primary hover:underline">Privacy Policy</Link>.</FormLabel><FormMessage /></div></FormItem>
+                                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 bg-background/50" onFocus={() => setActiveField('terms')}><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange}/></FormControl><div className="space-y-1 leading-none"><FormLabel>I agree to the{' '}<Link href="/terms" target="_blank" className="font-semibold text-primary hover:underline">Terms</Link> & <Link href="/privacy" target="_blank" className="font-semibold text-primary hover:underline">Privacy Policy</Link>.</FormLabel><FormMessage /></div></FormItem>
                                             )}/>
-                                            <Button type="submit" className="w-full" disabled={isLoading}>{isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Create Account</Button>
+                                            </motion.div>
+                                            <motion.div variants={fieldVariants} animate={activeField === 'submit' ? 'active' : 'inactive'}>
+                                                <Button type="submit" className="w-full" disabled={isLoading} onFocus={() => setActiveField('submit')} onBlur={() => setActiveField(null)}>{isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Create Account</Button>
+                                            </motion.div>
                                         </form>
                                     </Form>
                                     <div className="mt-6 text-center text-sm">
                                         Already have an account?{' '}
-                                        <button onClick={() => setMode('login')} className="font-semibold text-primary hover:underline">Log In</button>
+                                        <button onClick={() => { setMode('login'); setActiveField(null); }} className="font-semibold text-primary hover:underline">Log In</button>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -191,19 +213,25 @@ export default function AuthPage() {
                                 <CardContent>
                                     <Form {...loginForm}>
                                         <form onSubmit={loginForm.handleSubmit(handleLoginSubmit)} className="space-y-4">
-                                            <FormField control={loginForm.control} name="email" render={({ field }) => (
-                                                <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="name@yourcompany.com" {...field} /></FormControl><FormMessage /></FormItem>
-                                            )}/>
+                                            <motion.div variants={fieldVariants} animate={activeField === 'email' ? 'active' : 'inactive'}>
+                                                <FormField control={loginForm.control} name="email" render={({ field }) => (
+                                                    <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" placeholder="name@yourcompany.com" {...field} onFocus={() => setActiveField('email')} /></FormControl><FormMessage /></FormItem>
+                                                )}/>
+                                            </motion.div>
+                                            <motion.div variants={fieldVariants} animate={activeField === 'password' ? 'active' : 'inactive'}>
                                             <FormField control={loginForm.control} name="password" render={({ field }) => (
-                                                <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl><FormMessage /></FormItem>
+                                                <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} onFocus={() => setActiveField('password')} /></FormControl><FormMessage /></FormItem>
                                             )}/>
+                                            </motion.div>
                                             {loginForm.formState.errors.root && <p className="text-sm font-medium text-destructive">{loginForm.formState.errors.root.message}</p>}
-                                            <Button type="submit" className="w-full" disabled={isLoading}>{isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Log In</Button>
+                                            <motion.div variants={fieldVariants} animate={activeField === 'submit' ? 'active' : 'inactive'}>
+                                                <Button type="submit" className="w-full" disabled={isLoading} onFocus={() => setActiveField('submit')} onBlur={() => setActiveField(null)}>{isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Log In</Button>
+                                            </motion.div>
                                         </form>
                                     </Form>
                                     <div className="mt-6 text-center text-sm">
                                         Don't have an account?{' '}
-                                        <button onClick={() => setMode('signup')} className="font-semibold text-primary hover:underline">Sign Up</button>
+                                        <button onClick={() => { setMode('signup'); setActiveField(null); }} className="font-semibold text-primary hover:underline">Sign Up</button>
                                     </div>
                                     <p className="px-8 text-center text-xs text-muted-foreground mt-6">
                                         By continuing, you agree to our{' '}
