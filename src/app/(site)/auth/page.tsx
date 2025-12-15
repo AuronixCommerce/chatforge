@@ -212,7 +212,7 @@ export default function AuthPage() {
                                     </motion.div>
                                     <motion.div layoutId="password-wrapper" onClick={() => setActiveField('password')}>
                                         <FormField control={signupForm.control} name="password" render={({ field }) => (
-                                            <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl><FormMessage /></FormMessage>
+                                            <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl><FormMessage /></FormItem>
                                         )}/>
                                     </motion.div>
                                     <FormField control={signupForm.control} name="terms" render={({ field }) => (
