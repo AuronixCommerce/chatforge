@@ -220,7 +220,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="container py-8">
+    <div className="page-enter container py-8 sm:py-12">
       <h1 className="text-3xl font-bold mb-2">Welcome{user?.name ? `, ${user.name}` : ''}!</h1>
       <p className="text-muted-foreground mb-8">Here's your personal dashboard.</p>
 
@@ -493,5 +493,4 @@ const DashboardSkeleton = () => (
 );
 
     
-
 
