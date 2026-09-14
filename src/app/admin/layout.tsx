@@ -135,8 +135,9 @@ function AdminAccessGate({ children }: { children: ReactNode }) {
 
     if (isVerifying) {
         return (
-             <div className="flex h-screen w-full items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin" />
+             <div className="flex h-screen w-full flex-col items-center justify-center gap-4">
+                <span className="ios-spinner h-7 w-7 text-primary" />
+                <p className="eyebrow">Verifying secure access</p>
             </div>
         )
     }
@@ -144,7 +145,7 @@ function AdminAccessGate({ children }: { children: ReactNode }) {
     if (!isAuthenticated) {
         return (
             <Dialog open={true}>
-                <DialogContent>
+                <DialogContent className="glass-surface rounded-[1.5rem] border-white/50 sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle>Admin Verification Required</DialogTitle>
                         <DialogDescription>
@@ -194,10 +195,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <AdminAccessGate>
         <SidebarProvider>
-        <Sidebar>
+        <Sidebar className="border-r border-white/10 bg-[#08111f] text-white">
             <SidebarHeader>
-            <h2 className="flex items-center gap-2 text-lg font-semibold group-data-[collapsible=icon]:hidden">
-                <Shield /> Admin Panel
+            <h2 className="flex items-center gap-3 text-lg font-extrabold tracking-tight group-data-[collapsible=icon]:hidden">
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-cyan-400 to-violet-500"><Shield className="h-4 w-4" /></span> ChatForge Admin
             </h2>
             <div className="w-full border-t border-sidebar-border mt-2 group-data-[collapsible=icon]:hidden"></div>
             </SidebarHeader>
@@ -230,7 +231,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 <span className="sr-only">Toggle Menu</span>
             </SidebarTrigger>
             </header>
-            <main className="p-4 sm:px-6 sm:py-0">{children}</main>
+            <main className="page-enter p-4 sm:px-7 sm:py-2">{children}</main>
         </SidebarInset>
         </SidebarProvider>
     </AdminAccessGate>
