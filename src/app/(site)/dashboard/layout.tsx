@@ -4,7 +4,6 @@
 import { useAuth } from '@/components/providers/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useEffect, ReactNode } from 'react';
-import { Loader2 } from 'lucide-react';
 
 export default function ProtectedLayout({ children }: { children: ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -19,8 +18,9 @@ export default function ProtectedLayout({ children }: { children: ReactNode }) {
 
   if (isLoading || !user) {
     return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="flex h-screen w-full flex-col items-center justify-center gap-4">
+        <span className="ios-spinner h-7 w-7 text-primary" />
+        <p className="eyebrow">Opening workspace</p>
       </div>
     );
   }
