@@ -47,7 +47,7 @@ type AuthMode = 'login' | 'signup' | 'terms' | 'privacy';
 type ActiveField = 'name' | 'email' | 'password' | null;
 
 const LegalPage = ({ title, onBack, children }: { title: string, onBack: () => void, children: ReactNode }) => (
-    <Card className="w-full h-full shadow-2xl bg-card/80 backdrop-blur-sm flex flex-col">
+    <Card className="glass-surface w-full h-full shadow-2xl bg-card/60 backdrop-blur-2xl flex flex-col">
         <CardHeader>
             <CardTitle className="text-2xl">{title}</CardTitle>
             <CardDescription>Last updated: {new Date().toLocaleDateString()}</CardDescription>
@@ -135,7 +135,8 @@ export default function AuthPage() {
         try {
             const result = await customLogin(values);
             if (result.error) {
-                const errorMessage = result.error._errors?.join(', ') || 'Invalid credentials.';
+                const error = result.error as any;
+                const errorMessage = error._errors?.join(', ') || error.email?.[0] || error.password?.[0] || 'Invalid credentials.';
                 toast({ title: 'Login Failed', description: errorMessage, variant: 'destructive' });
                 loginForm.setError('root', { message: errorMessage });
             } else if (result.requiresOtp && result.userId) {
@@ -164,10 +165,11 @@ export default function AuthPage() {
         try {
           const result = await customSignUp(values);
           if (result.error) {
-            if (result.error.email) {
-              signupForm.setError('email', { message: result.error.email[0] });
+            const error = result.error as any;
+            if (error.email) {
+              signupForm.setError('email', { message: error.email[0] });
             } else {
-              const errorMessage = result.error._errors?.join(', ') || 'Could not create account.';
+              const errorMessage = error._errors?.join(', ') || 'Could not create account.';
               toast({ title: 'Sign Up Failed', description: errorMessage, variant: 'destructive' });
             }
           } else if (result.success && result.userId) {
@@ -192,7 +194,7 @@ export default function AuthPage() {
         switch (mode) {
             case 'signup':
                 return (
-                    <Card className="w-full h-full shadow-2xl bg-card/80 backdrop-blur-sm">
+                    <Card className="glass-surface w-full h-full shadow-2xl bg-card/60 backdrop-blur-2xl">
                         <CardHeader className="text-center">
                             <CardTitle className="text-2xl">Create an Account</CardTitle>
                             <CardDescription>Join ChatForge AI to get your API key.</CardDescription>
@@ -241,7 +243,7 @@ export default function AuthPage() {
                 );
             case 'login':
                  return (
-                    <Card className="w-full h-full shadow-2xl bg-card/80 backdrop-blur-sm">
+                    <Card className="glass-surface w-full h-full shadow-2xl bg-card/60 backdrop-blur-2xl">
                         <CardHeader className="text-center">
                             <CardTitle className="text-2xl">Welcome Back!</CardTitle>
                             <CardDescription>Log in to access your dashboard.</CardDescription>
@@ -293,7 +295,7 @@ export default function AuthPage() {
 
     return (
       <>
-        <div className="relative min-h-[calc(100vh-8rem)] w-full overflow-hidden bg-background">
+        <div className="page-enter relative min-h-[calc(100vh-8rem)] w-full overflow-hidden bg-transparent">
              <motion.div 
                 className="absolute inset-0 z-0"
                 animate={{ filter: activeField ? 'blur(8px)' : 'blur(0px)' }}
@@ -346,12 +348,12 @@ export default function AuthPage() {
                                 )}/>
                             )}
                             {activeField === 'email' && (
-                                <FormField control={mode === 'signup' ? signupForm.control : loginForm.control} name="email" render={({ field }) => (
+                                <FormField control={(mode === 'signup' ? signupForm.control : loginForm.control) as any} name="email" render={({ field }) => (
                                     <FormItem><FormLabel>Email</FormLabel><FormControl><Input autoFocus type="email" placeholder="name@yourcompany.com" {...field} /></FormControl><FormMessage /></FormItem>
                                 )}/>
                             )}
                              {activeField === 'password' && (
-                                <FormField control={mode === 'signup' ? signupForm.control : loginForm.control} name="password" render={({ field }) => (
+                                <FormField control={(mode === 'signup' ? signupForm.control : loginForm.control) as any} name="password" render={({ field }) => (
                                     <FormItem><FormLabel>Password</FormLabel><FormControl><Input autoFocus type="password" placeholder="••••••••" {...field} /></FormControl><FormMessage /></FormItem>
                                 )}/>
                             )}
