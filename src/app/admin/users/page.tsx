@@ -293,11 +293,12 @@ export default function UsersPage() {
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-start mb-8">
+    <div className="admin-page">
+      <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
-            <h1 className="text-3xl font-bold">User Management</h1>
-            <p className="text-muted-foreground">Search, view, and manage all registered users.</p>
+            <p className="eyebrow mb-2">Customer operations</p>
+            <h1 className="admin-heading">User management</h1>
+            <p className="mt-2 text-muted-foreground">Search, view, and manage all registered users.</p>
         </div>
         <Dialog open={isBulkEmailOpen} onOpenChange={setIsBulkEmailOpen}>
             <DialogTrigger asChild>
@@ -334,7 +335,7 @@ export default function UsersPage() {
         </Dialog>
       </div>
       
-      <Card className="shadow-lg">
+      <Card className="overflow-hidden">
         <CardHeader>
             <CardTitle>All Users ({users.length})</CardTitle>
             <CardDescription>A list of all users in the system.</CardDescription>

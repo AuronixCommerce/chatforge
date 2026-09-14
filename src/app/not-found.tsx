@@ -1,35 +1,18 @@
-import { Button } from '@/components/ui/button'
-import { SearchX } from 'lucide-react'
-import Link from 'next/link'
+import Link from 'next/link';
+import { ArrowLeft, Bot, Compass } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function NotFound() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background text-center p-4">
-      <div className="p-8 max-w-lg w-full">
-        <SearchX className="mx-auto h-16 w-16 text-primary" />
-        <h1 className="mt-6 text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">
-          404 - Page Not Found
-        </h1>
-        <p className="mt-4 text-lg text-muted-foreground">
-          Oops! The page you're looking for doesn't seem to exist.
-        </p>
-        <div className="mt-8">
-          <Button asChild size="lg">
-            <Link href="/">Go back to Homepage</Link>
-          </Button>
-        </div>
-        <div className="mt-10 pt-6 border-t border-border w-full max-w-md mx-auto">
-            <h3 className="text-lg font-semibold text-foreground mb-4">Here are some useful links:</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm font-medium">
-                <Link href="/about" className="text-primary hover:underline">About Us</Link>
-                <Link href="/pricing" className="text-primary hover:underline">Pricing</Link>
-                <Link href="/contact" className="text-primary hover:underline">Contact</Link>
-                <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link>
-                <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
-                <Link href="/login" className="text-primary hover:underline">Log In</Link>
-            </div>
-        </div>
+    <main className="page-enter relative isolate grid min-h-[75dvh] place-items-center overflow-hidden px-4 py-20 text-center">
+      <div className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-[36rem] w-[36rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/15 blur-[120px]" />
+      <div className="w-full max-w-2xl">
+        <div className="mx-auto flex w-fit items-center gap-3 rounded-full border border-border/70 bg-background/65 px-4 py-2 font-mono text-[9px] uppercase tracking-[.2em] text-muted-foreground shadow-sm backdrop-blur-xl"><Compass className="h-3.5 w-3.5 text-primary" /> Lost in conversation</div>
+        <div className="relative mx-auto mt-8 grid h-28 w-28 place-items-center rounded-[2rem] border border-white/60 bg-card/70 shadow-[0_24px_70px_-25px_rgba(8,15,35,.35)] backdrop-blur-2xl"><Bot className="h-10 w-10 text-primary" /><span className="absolute -right-3 -top-3 grid h-10 w-10 place-items-center rounded-2xl bg-[#07101d] text-xs font-extrabold text-white shadow-xl">404</span></div>
+        <h1 className="mt-9 text-5xl font-extrabold tracking-[-.06em] sm:text-6xl">This page left the chat.</h1>
+        <p className="mx-auto mt-5 max-w-lg text-base leading-7 text-muted-foreground">The link may have moved or never existed. Your workspace and conversations are still exactly where you left them.</p>
+        <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row"><Button asChild size="lg"><Link href="/"><ArrowLeft className="mr-2 h-4 w-4" /> Back home</Link></Button><Button asChild size="lg" variant="outline"><Link href="/contact">Contact support</Link></Button></div>
       </div>
-    </div>
-  )
+    </main>
+  );
 }

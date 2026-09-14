@@ -199,137 +199,91 @@ export default function ChatbotPage() {
     const isPremium = config.plan !== 'Free';
 
     return (
-        <div 
-            className="flex flex-col h-dvh w-full bg-slate-50 min-h-0"
+        <div
+            className="flex h-dvh min-h-0 w-full flex-col overflow-hidden bg-[#f4f7fb] text-slate-900"
             style={{
-                // @ts-ignore
-                '--theme-primary': `hsl(var(--theme-primary-h), var(--theme-primary-s), var(--theme-primary-l))`,
-                '--theme-primary-foreground': `hsl(var(--theme-primary-h), var(--theme-primary-s), ${'calc(var(--theme-primary-l) + 40%)'})`,
-                '--theme-primary-light': `hsl(var(--theme-primary-h), var(--theme-primary-s), 95%)`,
+                // @ts-ignore Custom properties are populated from each chatbot's saved brand color.
+                '--theme-primary': 'hsl(var(--theme-primary-h), var(--theme-primary-s), var(--theme-primary-l))',
+                '--theme-primary-light': 'hsl(var(--theme-primary-h), var(--theme-primary-s), 96%)',
             }}
         >
-            <header className="flex items-center shrink-0 gap-4 p-4 bg-[--theme-primary] text-white shadow-md z-10">
-                <Avatar className="h-10 w-10 border-2 border-white/50">
-                    <div className="flex h-full w-full items-center justify-center bg-white/20">
-                        <Bot className="h-6 w-6"/>
+            <header className="relative z-10 shrink-0 overflow-hidden bg-[#07101d] px-4 pb-4 pt-5 text-white shadow-[0_12px_40px_rgba(8,15,35,.18)]">
+                <div className="pointer-events-none absolute inset-0 opacity-80" style={{ background: 'radial-gradient(circle at 8% 0%, var(--theme-primary), transparent 52%)' }} />
+                <div className="relative flex items-center gap-3.5">
+                    <Avatar className="h-11 w-11 rounded-2xl border border-white/30 bg-white/15 shadow-lg backdrop-blur-xl">
+                        <div className="flex h-full w-full items-center justify-center"><Bot className="h-5 w-5" /></div>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                            <h1 className="truncate text-[15px] font-extrabold tracking-tight">{config.name}</h1>
+                            {isPremium && <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/10 px-2 py-0.5 font-mono text-[8px] font-medium uppercase tracking-[.14em] text-white/80" title={config.plan + ' Plan'}><Star className="h-2.5 w-2.5" fill="currentColor" />{config.plan}</span>}
+                        </div>
+                        <div className="mt-1 flex items-center gap-1.5">
+                            <motion.span animate={{ opacity: [.45, 1, .45], scale: [.9, 1.15, .9] }} transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' }} className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,.9)]" />
+                            <p className="text-[10px] font-semibold text-white/[.58]">Online · Typically replies instantly</p>
+                        </div>
                     </div>
-                </Avatar>
-                <div className="flex-1">
-                    <h1 className="text-lg font-bold flex items-center gap-1.5">
-                        {config.name}
-                        {isPremium && (
-                            <div className="grid place-items-center w-4 h-4 bg-white/20 text-white rounded-full" title={`${config.plan} Plan`}>
-                                <Star className="w-2.5 h-2.5" fill="currentColor"/>
-                            </div>
-                        )}
-                    </h1>
-                    <div className="flex items-center gap-1.5">
-                        <motion.div
-                            animate={{ scale: [1, 1.2, 1] }}
-                            transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }} 
-                            className="h-2 w-2 rounded-full bg-green-300"
-                        />
-                        <p className="text-xs text-white/80">Online</p>
-                    </div>
+                    <div className="grid h-8 w-8 place-items-center rounded-xl border border-white/10 bg-white/[.07]"><Star className="h-3.5 w-3.5 text-white/60" /></div>
                 </div>
             </header>
-            <div ref={chatContainerRef} className="flex-1 p-4 overflow-y-auto min-h-0">
+
+            <div ref={chatContainerRef} className="relative min-h-0 flex-1 overflow-y-auto px-4 py-5">
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[--theme-primary-light] to-transparent opacity-70" />
                 {!isLoaded && messages.length === 0 ? (
-                     <div className="flex h-full w-full items-center justify-center">
-                        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+                    <div className="relative flex h-full w-full flex-col items-center justify-center gap-3">
+                        <span className="ios-spinner h-7 w-7 text-slate-400" />
+                        <p className="font-mono text-[9px] uppercase tracking-[.2em] text-slate-400">Preparing conversation</p>
                     </div>
                 ) : (
-                    <AnimatePresence initial={false}>
-                        {messages.map((msg, index) => (
-                            <motion.div
-                                key={index}
-                                layout
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -20 }}
-                                transition={{ duration: 0.3, ease: 'easeOut' }}
-                                className={cn('flex items-end gap-2 my-3', msg.role === 'user' ? 'justify-end' : 'justify-start')}
-                            >
-                                {msg.role === 'bot' && (
-                                    <Avatar className="h-8 w-8 bg-[--theme-primary] text-white">
-                                        <div className="flex h-full w-full items-center justify-center">
-                                        <Bot className="h-5 w-5"/>
-                                        </div>
-                                    </Avatar>
-                                )}
-                                <div className={cn(
-                                    'max-w-[75%] rounded-2xl px-4 py-2 text-sm shadow-sm',
-                                    msg.role === 'user' ? 'bg-white text-slate-800 rounded-br-none' : 'bg-[--theme-primary] text-white rounded-bl-none'
-                                )}>
-                                <p className="whitespace-pre-wrap">{msg.text}</p>
-                                </div>
-                                {msg.role === 'user' && (
-                                    <Avatar className="h-8 w-8 bg-slate-200 text-slate-600">
-                                    <div className="flex h-full w-full items-center justify-center">
-                                        <User className="h-5 w-5"/>
-                                        </div>
-                                    </Avatar>
-                                )}
-                            </motion.div>
-                        ))}
-                        {isSending && (
-                            <motion.div
-                                layout
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="flex items-end gap-2 my-3 justify-start"
-                            >
-                                <Avatar className="h-8 w-8 bg-[--theme-primary] text-white">
-                                    <div className="flex h-full w-full items-center justify-center">
-                                        <Bot className="h-5 w-5"/>
+                    <div className="relative">
+                        <AnimatePresence initial={false}>
+                            {messages.map((msg, index) => (
+                                <motion.div
+                                    key={index}
+                                    layout
+                                    initial={{ opacity: 0, y: 14, scale: .98 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    transition={{ duration: .35 }}
+                                    className={cn('my-3 flex items-end gap-2.5', msg.role === 'user' ? 'justify-end' : 'justify-start')}
+                                >
+                                    {msg.role === 'bot' && <Avatar className="h-7 w-7 shrink-0 rounded-xl bg-[--theme-primary] text-white shadow-md"><div className="flex h-full w-full items-center justify-center"><Bot className="h-3.5 w-3.5" /></div></Avatar>}
+                                    <div className={cn(
+                                        'max-w-[82%] px-4 py-3 text-[13px] leading-5 shadow-sm',
+                                        msg.role === 'user'
+                                            ? 'rounded-[1.25rem] rounded-br-md bg-[--theme-primary] text-white shadow-[0_10px_28px_rgba(15,23,42,.12)]'
+                                            : 'rounded-[1.25rem] rounded-bl-md border border-slate-200/80 bg-white text-slate-700 shadow-[0_10px_30px_rgba(15,23,42,.06)]'
+                                    )}><p className="whitespace-pre-wrap">{msg.text}</p></div>
+                                    {msg.role === 'user' && <Avatar className="h-7 w-7 shrink-0 rounded-xl bg-slate-200 text-slate-500"><div className="flex h-full w-full items-center justify-center"><User className="h-3.5 w-3.5" /></div></Avatar>}
+                                </motion.div>
+                            ))}
+                            {isSending && (
+                                <motion.div layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="my-3 flex items-end gap-2.5">
+                                    <Avatar className="h-7 w-7 shrink-0 rounded-xl bg-[--theme-primary] text-white shadow-md"><div className="flex h-full w-full items-center justify-center"><Bot className="h-3.5 w-3.5" /></div></Avatar>
+                                    <div className="rounded-[1.25rem] rounded-bl-md border border-slate-200/80 bg-white px-4 py-3.5 shadow-[0_10px_30px_rgba(15,23,42,.06)]">
+                                        <motion.div className="flex gap-1" initial="hidden" animate="visible" variants={{ hidden: {}, visible: { transition: { staggerChildren: .18 } } }}>
+                                            {[0, 1, 2].map(dot => <motion.span key={dot} variants={{ visible: { y: [0, -3, 0], opacity: [.35, 1, .35] }, hidden: { y: 0 } }} transition={{ repeat: Infinity, duration: .9, delay: dot * .14 }} className="h-1.5 w-1.5 rounded-full bg-slate-400" />)}
+                                        </motion.div>
                                     </div>
-                                </Avatar>
-                                <div className="max-w-[75%] rounded-2xl px-4 py-3 text-sm shadow-sm bg-[--theme-primary] text-white rounded-bl-none">
-                                    <motion.div
-                                        className="flex gap-1"
-                                        initial="hidden"
-                                        animate="visible"
-                                        variants={{
-                                            hidden: { },
-                                            visible: { transition: { staggerChildren: 0.2 } },
-                                        }}
-                                    >
-                                        <motion.span variants={{ visible: { y: [0, -3, 0] }, hidden: { y: 0 }}} transition={{ repeat: Infinity, duration: 1}} className="w-1.5 h-1.5 rounded-full bg-white/70" />
-                                        <motion.span variants={{ visible: { y: [0, -3, 0] }, hidden: { y: 0 }}} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 rounded-full bg-white/70" />
-                                        <motion.span variants={{ visible: { y: [0, -3, 0] }, hidden: { y: 0 }}} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 rounded-full bg-white/70" />
-                                    </motion.div>
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
                 )}
             </div>
-            <div className="bg-white p-2 shrink-0 border-t">
-                <div className="relative">
-                    <input
-                        type="text"
-                        placeholder="Type your message..."
-                        className="w-full rounded-full border bg-slate-100 py-3 pl-4 pr-12 text-sm outline-none ring-offset-2 focus:ring-2 focus:ring-[--theme-primary]"
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                        disabled={isSending}
-                    />
-                    <button
-                        onClick={handleSendMessage}
-                        disabled={isSending || !inputValue}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 grid h-9 w-9 place-items-center rounded-full bg-[--theme-primary] text-white shadow-md transition-all hover:bg-opacity-90 disabled:cursor-not-allowed disabled:bg-slate-300"
-                    >
-                        {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+
+            <div className="shrink-0 border-t border-slate-200/80 bg-white/90 p-3 pb-2 backdrop-blur-2xl">
+                <div className="relative rounded-2xl border border-slate-200 bg-slate-50 p-1.5 shadow-inner transition-all focus-within:border-[--theme-primary] focus-within:bg-white focus-within:shadow-[0_0_0_4px_var(--theme-primary-light)]">
+                    <input type="text" aria-label="Message" placeholder="Ask me anything..." className="h-10 w-full bg-transparent pl-3 pr-12 text-[13px] font-medium text-slate-800 outline-none placeholder:text-slate-400" value={inputValue} onChange={(event) => setInputValue(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && handleSendMessage()} disabled={isSending} />
+                    <button type="button" aria-label="Send message" onClick={handleSendMessage} disabled={isSending || !inputValue.trim()} className="absolute right-1.5 top-1.5 grid h-10 w-10 place-items-center rounded-xl bg-[--theme-primary] text-white shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none">
+                        {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                     </button>
                 </div>
+                <div className="mt-2 flex items-center justify-between px-1 text-[9px] text-slate-400">
+                    <span className="hidden items-center gap-1 sm:flex"><CornerDownLeft className="h-3 w-3" /> Enter to send</span>
+                    <span className="ml-auto">Powered by <a href="https://chatforge.thechohan.space/" target="_blank" rel="noopener noreferrer" className="font-bold text-slate-500 transition-colors hover:text-[--theme-primary]">ChatForge AI</a></span>
+                </div>
             </div>
-            <footer className="text-center text-xs text-slate-400 p-2 bg-slate-50 border-t shrink-0">
-                Powered by{' '}
-                <a href="https://chatforge.thechohan.space/" target="_blank" rel="noopener noreferrer" className="text-[--theme-primary] hover:underline">
-                ChatForge AI
-                </a>
-            </footer>
         </div>
     );
 }

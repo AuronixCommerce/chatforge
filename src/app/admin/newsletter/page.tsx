@@ -93,10 +93,11 @@ export default function NewsletterPage() {
     }
 
     return (
-        <div className="space-y-8">
+        <div className="admin-page">
             <div>
-                <h1 className="text-3xl font-bold">Newsletter</h1>
-                <p className="text-muted-foreground">Compose and send emails to all your subscribers.</p>
+                <p className="eyebrow mb-2">Audience broadcast</p>
+                <h1 className="admin-heading">Newsletter</h1>
+                <p className="mt-2 text-muted-foreground">Compose and send emails to all your subscribers.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -165,7 +166,7 @@ export default function NewsletterPage() {
                     </Card>
                 </div>
 
-                <Card className="lg:col-span-1 shadow-lg h-fit">
+                <Card className="lg:col-span-1 h-fit">
                     <CardHeader>
                         <CardTitle>Subscribers ({subscribers.length})</CardTitle>
                         <CardDescription>List of all newsletter subscribers.</CardDescription>

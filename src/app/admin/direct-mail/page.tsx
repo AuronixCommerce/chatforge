@@ -131,14 +131,15 @@ export default function DirectMailPage() {
     }
 
     return (
-        <div className="space-y-8">
+        <div className="admin-page">
             <div>
-                <h1 className="text-3xl font-bold">Direct Mail</h1>
-                <p className="text-muted-foreground">Send targeted emails to individual users with AI assistance.</p>
+                <p className="eyebrow mb-2">One-to-one outreach</p>
+                <h1 className="admin-heading">Direct mail</h1>
+                <p className="mt-2 text-muted-foreground">Send targeted emails to individual users with AI assistance.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                <Card className="lg:col-span-1 shadow-lg">
+                <Card className="lg:col-span-1">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><Users /> Select User</CardTitle>
                         <CardDescription>Search for and select a user to contact.</CardDescription>

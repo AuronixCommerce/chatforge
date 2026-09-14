@@ -195,19 +195,19 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <AdminAccessGate>
         <SidebarProvider>
-        <Sidebar className="border-r border-white/10 bg-[#08111f] text-white">
-            <SidebarHeader>
+        <Sidebar className="border-r border-white/10 [--sidebar-background:222_47%_7%] [--sidebar-foreground:210_40%_96%] [--sidebar-accent:220_28%_14%] [--sidebar-accent-foreground:0_0%_100%] [--sidebar-border:220_22%_18%]">
+            <SidebarHeader className="px-4 pb-3 pt-5">
             <h2 className="flex items-center gap-3 text-lg font-extrabold tracking-tight group-data-[collapsible=icon]:hidden">
-                <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-cyan-400 to-violet-500"><Shield className="h-4 w-4" /></span> ChatForge Admin
+                <span className="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-cyan-400 to-violet-500 shadow-[0_12px_30px_rgba(34,211,238,.24)]"><Shield className="h-4 w-4" /></span><span>ChatForge <span className="block font-mono text-[8px] font-medium uppercase tracking-[.2em] text-sidebar-foreground/40">Control plane</span></span>
             </h2>
-            <div className="w-full border-t border-sidebar-border mt-2 group-data-[collapsible=icon]:hidden"></div>
+            <div className="mt-4 w-full border-t border-sidebar-border group-data-[collapsible=icon]:hidden"></div>
             </SidebarHeader>
-            <SidebarContent>
+            <SidebarContent className="px-2 py-3">
             <SidebarMenu>
                 {menuItems.map((item) => (
                 <SidebarMenuItem key={item.label}>
                     <Link href={item.href}>
-                    <SidebarMenuButton isActive={pathname.startsWith(item.href)}>
+                    <SidebarMenuButton isActive={pathname.startsWith(item.href)} className="my-0.5 h-11 rounded-xl px-3 font-semibold transition-all duration-300 data-[active=true]:bg-white/10 data-[active=true]:text-white data-[active=true]:shadow-[inset_0_0_0_1px_rgba(255,255,255,.08)]">
                         <item.icon />
                         <span>{item.label}</span>
                     </SidebarMenuButton>
@@ -216,22 +216,24 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 ))}
             </SidebarMenu>
             </SidebarContent>
-            <SidebarFooter>
-            <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-                <span className="text-xs text-sidebar-foreground/70">
-                Powered by ChatForge
-                </span>
+            <SidebarFooter className="p-4">
+            <div className="rounded-2xl border border-white/10 bg-white/[.04] p-3 group-data-[collapsible=icon]:hidden">
+                <div className="mb-2 flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,.8)]" /><span className="text-[10px] font-bold text-sidebar-foreground/80">Systems operational</span></div>
+                <span className="font-mono text-[8px] uppercase tracking-[.14em] text-sidebar-foreground/35">ChatForge Admin v2</span>
             </div>
             </SidebarFooter>
         </Sidebar>
-        <SidebarInset>
-            <header className="sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 md:hidden">
+        <SidebarInset className="relative isolate min-h-dvh overflow-hidden bg-background/80">
+            <div className="pointer-events-none absolute -right-40 -top-52 -z-10 h-[34rem] w-[34rem] rounded-full bg-primary/10 blur-[110px]" />
+            <div className="pointer-events-none absolute -bottom-48 left-1/3 -z-10 h-[30rem] w-[30rem] rounded-full bg-accent/10 blur-[120px]" />
+            <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-border/60 bg-background/75 px-4 backdrop-blur-2xl md:hidden">
             <SidebarTrigger size="icon" variant="outline">
                 <PanelLeft className="h-5 w-5" />
                 <span className="sr-only">Toggle Menu</span>
             </SidebarTrigger>
+            <div><p className="text-sm font-extrabold">ChatForge Admin</p><p className="font-mono text-[8px] uppercase tracking-[.16em] text-muted-foreground">Control plane</p></div>
             </header>
-            <main className="page-enter p-4 sm:px-7 sm:py-2">{children}</main>
+            <main className="page-enter relative px-4 sm:px-7 xl:px-10">{children}</main>
         </SidebarInset>
         </SidebarProvider>
     </AdminAccessGate>

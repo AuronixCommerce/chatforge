@@ -112,16 +112,17 @@ export default function SubmissionsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="admin-page">
         <div>
-            <h1 className="text-3xl font-bold">Plan Submissions</h1>
-            <p className="text-muted-foreground">Review and respond to inquiries from potential customers.</p>
+            <p className="eyebrow mb-2">Revenue pipeline</p>
+            <h1 className="admin-heading">Plan submissions</h1>
+            <p className="mt-2 text-muted-foreground">Review and respond to inquiries from potential customers.</p>
         </div>
       
       {isLoading ? (
         <TableSkeleton />
       ) : submissions.length === 0 ? (
-        <Card className="shadow-lg">
+        <Card className="overflow-hidden">
             <CardContent className="pt-6">
                 <div className="flex flex-col justify-center items-center h-64 text-center">
                     <Inbox className="h-12 w-12 text-muted-foreground mb-4" />
@@ -131,7 +132,7 @@ export default function SubmissionsPage() {
             </CardContent>
         </Card>
       ) : (
-        <Card className="shadow-lg">
+        <Card className="overflow-hidden">
             <CardContent className="pt-6">
                 <Table>
                     <TableHeader>
@@ -240,7 +241,7 @@ export default function SubmissionsPage() {
 
 
 const TableSkeleton = () => (
-    <Card className="shadow-lg">
+    <Card className="overflow-hidden">
         <CardContent className="pt-6">
             <div className="space-y-4">
                 <Skeleton className="h-10 w-full" />

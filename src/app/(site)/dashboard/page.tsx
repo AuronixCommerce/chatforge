@@ -220,19 +220,31 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="page-enter container py-8 sm:py-12">
-      <p className="eyebrow mb-2">Command center</p>
-      <h1 className="mb-2 text-3xl font-extrabold tracking-[-.04em] sm:text-4xl">Welcome{user?.name ? `, ${user.name}` : ''}</h1>
-      <p className="mb-9 text-muted-foreground">Build, configure and ship your AI experience from one place.</p>
+    <div className="page-enter container max-w-[1500px] py-8 sm:py-12">
+      <section className="relative mb-8 overflow-hidden rounded-[2rem] bg-[#07101d] p-7 text-white shadow-[0_30px_90px_rgba(8,15,35,.24)] sm:p-9">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_8%_0%,rgba(34,211,238,.22),transparent_30rem),radial-gradient(circle_at_92%_120%,rgba(139,92,246,.3),transparent_32rem)]" />
+        <div className="relative grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div>
+            <p className="mb-3 font-mono text-[9px] uppercase tracking-[.25em] text-cyan-300">Command center</p>
+            <h1 className="text-3xl font-extrabold tracking-[-.05em] sm:text-5xl">Welcome{user?.name ? ', ' + user.name : ''}</h1>
+            <p className="mt-4 max-w-xl text-sm leading-6 text-white/50">Build, tune, test, and ship every AI experience from one beautifully focused workspace.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="min-w-32 rounded-2xl border border-white/10 bg-white/[.06] p-4 backdrop-blur-xl"><p className="font-mono text-[8px] uppercase tracking-[.16em] text-white/35">Assistants</p><p className="mt-2 text-2xl font-extrabold">{chatbots.length}<span className="ml-1 text-sm text-white/30">/{botLimit}</span></p></div>
+            <div className="min-w-32 rounded-2xl border border-white/10 bg-white/[.06] p-4 backdrop-blur-xl"><p className="font-mono text-[8px] uppercase tracking-[.16em] text-white/35">Messages</p><p className="mt-2 text-2xl font-extrabold">{messagesUsed.toLocaleString()}<span className="ml-1 text-sm text-white/30">/{messageLimit.toLocaleString()}</span></p></div>
+          </div>
+        </div>
+      </section>
 
       <div className="grid gap-8">
         
-        <Card className="overflow-hidden shadow-lg">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary"><Bot className="h-5 w-5" /></span> My Chatbots <span className="ml-auto rounded-full bg-muted px-3 py-1 text-xs">{chatbots.length} / {botLimit}</span></CardTitle>
+        <Card className="overflow-hidden">
+            <CardHeader className="border-b border-border/60 bg-background/35">
+                <p className="eyebrow">Assistant fleet</p>
+                <CardTitle className="flex items-center gap-3 pt-1"><span className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary"><Bot className="h-5 w-5" /></span> My chatbots <span className="ml-auto rounded-full border border-border/60 bg-background/70 px-3 py-1 font-mono text-[9px] uppercase tracking-[.12em]">{chatbots.length} / {botLimit} active</span></CardTitle>
                 <CardDescription>Select a chatbot to configure, or create a new one.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                     <div className="space-y-2">
                         <Label htmlFor="bot-selector">Select a Bot</Label>
@@ -276,17 +288,18 @@ export default function DashboardPage() {
         </Card>
         
         {isLoadingBots ? <DashboardSkeleton/> : !selectedBot ? (
-            <Card className="shadow-lg text-center p-12">
-                <Sparkles className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-xl font-semibold">Create Your First Chatbot</h3>
-                <p className="text-muted-foreground max-w-sm mx-auto">Click the button above to create a new chatbot and start configuring it.</p>
+            <Card className="overflow-hidden p-12 text-center">
+                <span className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-[1.4rem] bg-gradient-to-br from-primary/15 to-accent/15 text-primary"><Sparkles className="h-7 w-7" /></span>
+                <h3 className="text-xl font-extrabold tracking-tight">Create your first chatbot</h3>
+                <p className="mx-auto mt-2 max-w-sm text-muted-foreground">Use the control above to create a new chatbot and start shaping its experience.</p>
             </Card>
         ) : (
             <div className="grid gap-6 lg:grid-cols-[1.15fr_.85fr]">
-                <Card className="shadow-lg">
-                    <CardHeader className="flex flex-row justify-between items-start">
+                <Card className="overflow-hidden">
+                    <CardHeader className="flex flex-row items-start justify-between border-b border-border/60 bg-background/35">
                         <div>
-                            <CardTitle className="flex items-center gap-2"><Settings/> Configure "{selectedBot.name}"</CardTitle>
+                            <p className="eyebrow mb-2">Behavior studio</p>
+                            <CardTitle className="flex items-center gap-2"><Settings className="h-5 w-5 text-primary"/> Configure “{selectedBot.name}”</CardTitle>
                             <CardDescription>
                             Provide custom instructions and Q&A to tailor your chatbot's responses.
                             </CardDescription>
@@ -310,7 +323,7 @@ export default function DashboardPage() {
                             </AlertDialogContent>
                          </AlertDialog>
                     </CardHeader>
-                    <CardContent className="space-y-6">
+                    <CardContent className="space-y-6 pt-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="bot-name">Chatbot Name</Label>
@@ -349,7 +362,7 @@ export default function DashboardPage() {
                         <Label>Custom Q&A</Label>
                         <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
                         {qaList.map((qa, index) => (
-                            <div key={index} className="flex items-center gap-2 p-2 rounded-md bg-secondary">
+                            <div key={index} className="flex items-center gap-2 rounded-xl border border-border/60 bg-secondary/60 p-3 transition-colors hover:border-primary/25">
                             <div className="flex-1">
                                 <p className="text-sm font-medium">{qa.question}</p>
                                 <p className="text-xs text-muted-foreground">{qa.answer}</p>
