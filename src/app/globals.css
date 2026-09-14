@@ -120,6 +120,8 @@ body::before {
   .glass-surface { @apply border border-white/40 bg-white/65 shadow-[0_18px_70px_-30px_hsl(220_40%_20%_/_0.35)] backdrop-blur-2xl dark:border-white/10 dark:bg-white/[0.06]; }
   .eyebrow { @apply font-mono text-[10px] font-medium uppercase tracking-[0.24em] text-primary; }
   .page-enter { animation: page-enter .55s cubic-bezier(.22,1,.36,1) both; }
+  .ios-spinner { width: 18px; height: 18px; border-radius: 999px; border: 2px solid currentColor; border-right-color: transparent; display: inline-block; animation: spin .7s linear infinite; }
 }
 
 @keyframes page-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes spin { to { transform: rotate(360deg); } }
