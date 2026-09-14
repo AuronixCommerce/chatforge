@@ -221,14 +221,15 @@ export default function DashboardPage() {
 
   return (
     <div className="page-enter container py-8 sm:py-12">
-      <h1 className="text-3xl font-bold mb-2">Welcome{user?.name ? `, ${user.name}` : ''}!</h1>
-      <p className="text-muted-foreground mb-8">Here's your personal dashboard.</p>
+      <p className="eyebrow mb-2">Command center</p>
+      <h1 className="mb-2 text-3xl font-extrabold tracking-[-.04em] sm:text-4xl">Welcome{user?.name ? `, ${user.name}` : ''}</h1>
+      <p className="mb-9 text-muted-foreground">Build, configure and ship your AI experience from one place.</p>
 
       <div className="grid gap-8">
         
-        <Card className="shadow-lg">
+        <Card className="overflow-hidden shadow-lg">
             <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Bot /> My Chatbots ({chatbots.length} / {botLimit})</CardTitle>
+                <CardTitle className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary"><Bot className="h-5 w-5" /></span> My Chatbots <span className="ml-auto rounded-full bg-muted px-3 py-1 text-xs">{chatbots.length} / {botLimit}</span></CardTitle>
                 <CardDescription>Select a chatbot to configure, or create a new one.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -281,7 +282,7 @@ export default function DashboardPage() {
                 <p className="text-muted-foreground max-w-sm mx-auto">Click the button above to create a new chatbot and start configuring it.</p>
             </Card>
         ) : (
-            <div className="grid gap-8 lg:grid-cols-2">
+            <div className="grid gap-6 lg:grid-cols-[1.15fr_.85fr]">
                 <Card className="shadow-lg">
                     <CardHeader className="flex flex-row justify-between items-start">
                         <div>
@@ -493,4 +494,3 @@ const DashboardSkeleton = () => (
 );
 
     
-
