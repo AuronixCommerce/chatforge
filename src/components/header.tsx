@@ -43,17 +43,17 @@ export default function Header() {
   };
   
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-14 max-w-screen-2xl items-center">
+    <header className="sticky top-0 z-50 w-full border-b border-white/50 bg-background/70 shadow-[0_8px_40px_-24px_rgba(15,23,42,.35)] backdrop-blur-2xl dark:border-white/10">
+      <div className="container flex h-16 max-w-screen-2xl items-center">
         <div className="mr-4 flex">
-          <Link href="/" className="mr-6 flex items-center space-x-2">
+          <Link href="/" className="group mr-7 flex items-center space-x-2.5">
             <svg
               width="24"
               height="24"
               viewBox="0 0 24 24"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
+              className="h-8 w-8 drop-shadow-[0_6px_12px_hsl(var(--primary)/.25)] transition-transform duration-300 group-hover:rotate-6 group-hover:scale-105"
             >
               <path
                 d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C13.84 22 15.58 21.53 17.07 20.75L12 15.68V14.26L19.36 21.62C20.5 20.3 21.36 18.73 21.82 17H19.74L12 9.26V7.84L21.62 17.46C21.86 16.35 22 15.19 22 14C22 7.37 17.52 2.89 12 2Z"
@@ -64,17 +64,17 @@ export default function Header() {
                 className="fill-primary/50"
               />
             </svg>
-            <span className="font-bold sm:inline-block">
-              ChatForge AI
+            <span className="font-extrabold tracking-[-.03em] sm:inline-block">
+              ChatForge <span className="text-primary">AI</span>
             </span>
           </Link>
-          <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
-            <Link href="/about" className="text-muted-foreground/70 transition-colors hover:text-muted-foreground">About</Link>
-            <Link href="/pricing" className="text-muted-foreground/70 transition-colors hover:text-muted-foreground">Pricing</Link>
+          <nav className="hidden md:flex items-center gap-1 text-sm font-semibold">
+            <Link href="/about" className="rounded-xl px-3 py-2 text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground">About</Link>
+            <Link href="/pricing" className="rounded-xl px-3 py-2 text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground">Pricing</Link>
             {user && (
-                 <Link href="/install" className="text-primary transition-colors hover:text-primary/80 font-semibold">Install Now</Link>
+                 <Link href="/install" className="rounded-xl px-3 py-2 text-primary transition-colors hover:bg-primary/10">Install</Link>
             )}
-            <Link href="/contact" className="text-muted-foreground/70 transition-colors hover:text-muted-foreground">Contact</Link>
+            <Link href="/contact" className="rounded-xl px-3 py-2 text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground">Contact</Link>
           </nav>
         </div>
         <div className="flex flex-1 items-center justify-end space-x-2">
@@ -114,9 +114,10 @@ export default function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button asChild>
-              <Link href="/auth">Get Started</Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button asChild variant="ghost" className="hidden sm:inline-flex"><Link href="/login">Sign in</Link></Button>
+              <Button asChild><Link href="/signup">Start free</Link></Button>
+            </div>
           )}
         </div>
       </div>
