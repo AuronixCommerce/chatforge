@@ -16,7 +16,7 @@ export default function Home() {
 
   return (
     <HomePageGame>
-      {({ isGameActive, startGame, isGameOver }) => (
+      {({ isGameActive, startGame, isGameOver, startButtonRef }) => (
         <div className="flex flex-col items-center justify-center bg-background">
           <section className="relative w-full overflow-hidden bg-gradient-to-b from-background via-background to-secondary/20 py-20 md:py-32">
             <div className="absolute inset-0 z-0">
@@ -44,6 +44,7 @@ export default function Home() {
                   </div>
                   <div className="flex flex-col gap-4 min-[400px]:flex-row">
                     <Button 
+                      ref={startButtonRef}
                       onClick={() => {
                         if (isGameActive || !isGameOver) {
                           startGame();
@@ -70,9 +71,13 @@ export default function Home() {
             </div>
           </section>
 
-          <AnimatedFeatures />
+          <div contentEditable={isGameActive} suppressContentEditableWarning={true} className="w-full outline-none">
+            <AnimatedFeatures />
+          </div>
 
-          <HowItWorksAnimation />
+          <div contentEditable={isGameActive} suppressContentEditableWarning={true} className="w-full outline-none">
+            <HowItWorksAnimation />
+          </div>
 
           <section id="pricing" className="w-full py-12 md:py-24 lg:py-32">
             <div className="container grid items-center justify-center gap-4 px-4 text-center md:px-6">
@@ -166,8 +171,18 @@ export default function Home() {
 
            <section className="w-full py-12 md:py-24 lg:py-32 bg-secondary/20">
             <div className="container text-center">
-                <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl">Ready to build your AI Chatbot?</h2>
-                <p className="mx-auto mt-4 max-w-xl text-muted-foreground md:text-lg">
+                <h2 
+                    className="text-3xl font-bold tracking-tighter sm:text-4xl outline-none"
+                    contentEditable={isGameActive}
+                    suppressContentEditableWarning={true}
+                >
+                    Ready to build your AI Chatbot?
+                </h2>
+                <p 
+                    className="mx-auto mt-4 max-w-xl text-muted-foreground md:text-lg outline-none"
+                    contentEditable={isGameActive}
+                    suppressContentEditableWarning={true}
+                >
                     Sign up today and get your API key in seconds. No credit card required.
                 </p>
                 <div className="mt-8">
