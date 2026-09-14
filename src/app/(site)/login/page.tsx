@@ -79,7 +79,8 @@ export default function AuthPage() {
         try {
             const result = await customLogin(values);
             if (result.error) {
-                const errorMessage = result.error._errors?.join(', ') || 'Invalid credentials.';
+                const error = result.error as any;
+                const errorMessage = error._errors?.join(', ') || error.email?.[0] || error.password?.[0] || 'Invalid credentials.';
                 toast({ title: 'Login Failed', description: errorMessage, variant: 'destructive' });
                 loginForm.setError('root', { message: errorMessage });
             } else if (result.requiresOtp && result.userId) {
@@ -108,10 +109,11 @@ export default function AuthPage() {
         try {
           const result = await customSignUp(values);
           if (result.error) {
-            if (result.error.email) {
-              signupForm.setError('email', { message: result.error.email[0] });
+            const error = result.error as any;
+            if (error.email) {
+              signupForm.setError('email', { message: error.email[0] });
             } else {
-              const errorMessage = result.error._errors?.join(', ') || 'Could not create account.';
+              const errorMessage = error._errors?.join(', ') || 'Could not create account.';
               toast({ title: 'Sign Up Failed', description: errorMessage, variant: 'destructive' });
             }
           } else if (result.success && result.userId) {
@@ -134,7 +136,7 @@ export default function AuthPage() {
 
     return (
       <>
-        <div className="container py-12 flex items-center justify-center min-h-[calc(100vh-150px)]">
+        <div className="page-enter container py-12 flex items-center justify-center min-h-[calc(100vh-150px)]">
             <div className="relative w-full max-w-md h-[720px]" style={{ perspective: '1200px' }}>
                 <AnimatePresence initial={false} mode="wait">
                     <motion.div
@@ -146,7 +148,7 @@ export default function AuthPage() {
                         className="absolute w-full h-full"
                     >
                     {mode === 'signup' ? (
-                        <Card className="w-full shadow-2xl">
+                        <Card className="glass-surface w-full shadow-2xl">
                              <CardHeader className="text-center">
                                 <CardTitle className="text-2xl">Create an Account</CardTitle>
                                 <CardDescription>Join ChatForge AI to get your API key.</CardDescription>
@@ -176,7 +178,7 @@ export default function AuthPage() {
                             </CardContent>
                         </Card>
                     ) : (
-                         <Card className="w-full shadow-2xl">
+                         <Card className="glass-surface w-full shadow-2xl">
                             <CardHeader className="text-center">
                                 <CardTitle className="text-2xl">Welcome Back!</CardTitle>
                                 <CardDescription>Log in to access your dashboard.</CardDescription>
