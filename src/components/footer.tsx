@@ -62,13 +62,16 @@ export default function Footer() {
 
 
   return (
-    <footer className="bg-gray-900 text-gray-400">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <footer className="relative overflow-hidden border-t border-white/10 bg-[#07101d] text-slate-400">
+      <div className="pointer-events-none absolute -left-32 top-0 h-72 w-72 rounded-full bg-primary/15 blur-[100px]" />
+      <div className="pointer-events-none absolute -right-32 bottom-0 h-72 w-72 rounded-full bg-accent/15 blur-[100px]" />
+      <div className="container relative mx-auto px-4 py-16 sm:px-6 lg:px-8">
         
-        <div className="bg-gray-800 rounded-lg p-8 mb-12 shadow-lg">
+        <div className="mb-14 rounded-[1.75rem] border border-white/10 bg-white/[.055] p-7 shadow-2xl backdrop-blur-xl sm:p-9">
             <div className="grid md:grid-cols-2 gap-8 items-center">
                 <div>
-                    <h3 className="text-2xl font-bold text-white mb-2">Stay Ahead of the Curve</h3>
+                    <p className="mb-2 font-mono text-[10px] uppercase tracking-[.24em] text-cyan-300">Product signals</p>
+                    <h3 className="mb-2 text-2xl font-extrabold tracking-tight text-white">Stay ahead of the curve</h3>
                     <p className="text-gray-400">Subscribe to our newsletter for the latest on AI, product updates, and exclusive offers.</p>
                 </div>
                  <Form {...form}>
@@ -84,7 +87,7 @@ export default function Footer() {
                                             {...field}
                                             type="email"
                                             placeholder="your@email.com" 
-                                            className="bg-gray-900 border-gray-700 rounded-r-none h-12 text-white flex-1 focus:ring-primary focus:border-primary"
+                                            className="h-12 flex-1 rounded-r-none border-white/10 bg-black/20 text-white focus:border-primary focus:ring-primary"
                                             disabled={isLoading}
                                         />
                                     </FormControl>
@@ -172,7 +175,7 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-gray-800 text-center">
+        <div className="mt-14 border-t border-white/10 pt-8 text-center text-sm">
           <p>
             © {new Date().getFullYear()} ChatForge AI by{' '}
             <a 
