@@ -4,16 +4,7 @@
 import { useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Key, Code, Rocket, Info } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-
+import { Key, Code, Rocket } from 'lucide-react';
 
 const features = [
   {
@@ -24,7 +15,7 @@ const features = [
   {
     icon: Code,
     title: "Customized Guides",
-    description: "Our AI analyzes your website content to generate a personalized integration snippet for HTML, React, & Next.js."
+    description: "Our platform provides personalized integration snippets for HTML, React, & Next.js tailored to your chatbot settings."
   },
   {
     icon: Rocket,
@@ -52,34 +43,6 @@ export default function AnimatedFeatures() {
 
   return (
     <section ref={ref} id="features" className="relative w-full py-12 md:py-24 lg:py-32 overflow-hidden z-30">
-        {/* Animated notes from the side */}
-        <motion.div 
-            className="absolute top-1/4 -left-12 w-32 h-24 bg-accent/30 rounded-lg shadow-lg -rotate-12"
-            animate={isInView ? { x: 0, opacity: 1, rotate: -15 } : { x: -200, opacity: 0, rotate: -45 }}
-            transition={{ duration: 0.8, delay: 0.2, ease: 'easeOut' }}
-        />
-        <motion.div 
-            className="absolute top-1/2 -right-16 w-40 h-28 bg-primary/20 rounded-lg shadow-xl rotate-12"
-            animate={isInView ? { x: 0, opacity: 1, rotate: 15 } : { x: 200, opacity: 0, rotate: 45 }}
-            transition={{ duration: 0.8, delay: 0.4, ease: 'easeOut' }}
-        />
-         <motion.div 
-            className="absolute bottom-1/4 -left-8 w-24 h-20 bg-secondary rounded-lg shadow-md rotate-6"
-            animate={isInView ? { x: 0, opacity: 1, rotate: 10 } : { x: -200, opacity: 0, rotate: -20 }}
-            transition={{ duration: 0.8, delay: 0.6, ease: 'easeOut' }}
-        />
-        <motion.div 
-            className="absolute bottom-1/3 -right-10 w-28 h-24 bg-accent/20 rounded-lg shadow-lg -rotate-6"
-            animate={isInView ? { x: 0, opacity: 1, rotate: -8 } : { x: 200, opacity: 0, rotate: 25 }}
-            transition={{ duration: 0.8, delay: 0.8, ease: 'easeOut' }}
-        />
-        <motion.div 
-            className="absolute top-1/3 -left-10 w-20 h-20 bg-primary/10 rounded-full shadow-lg rotate-12"
-            animate={isInView ? { x: 0, opacity: 1, rotate: 12 } : { x: -200, opacity: 0, rotate: -15 }}
-            transition={{ duration: 0.8, delay: 1, ease: 'easeOut' }}
-        />
-
-
         <div className="container px-4 md:px-6 relative z-10">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
             <motion.div
@@ -88,24 +51,7 @@ export default function AnimatedFeatures() {
                 transition={{ duration: 0.6 }}
             >
                 <div className="inline-block rounded-lg bg-muted px-3 py-1 text-sm font-medium">
-                    <div className="flex items-center gap-2">
-                        Key Features
-                        <Dialog>
-                            <DialogTrigger asChild>
-                                <button className="cursor-pointer">
-                                    <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
-                                </button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                <DialogTitle>What are the flying notes?</DialogTitle>
-                                <DialogDescription>
-                                    The animated notes that fly in from the sides represent the power of AI to generate ideas, content, and solutions. They symbolize the creativity and efficiency that ChatForge AI brings to your website.
-                                </DialogDescription>
-                                </DialogHeader>
-                            </DialogContent>
-                        </Dialog>
-                    </div>
+                    Key Features
                 </div>
                 <h2 className="text-3xl font-bold tracking-tighter sm:text-5xl">Effortless Integration, Powerful Results</h2>
                 <p className="max-w-[900px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
